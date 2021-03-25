@@ -1,0 +1,10 @@
+BasedOnStyle: LLVM
+Language: Cpp
+
+IndentWidth: 2
+
+AlwaysBreakTemplateDeclarations: true
+DerivePointerAlignment: false
+PointerAlignment: Left
+
+SortIncludes: false
