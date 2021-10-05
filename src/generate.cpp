@@ -155,10 +155,10 @@ Data generate_features(const char* filename, const char* ref,
 
           auto pos_itr = align_info[*curr].find(query_id);
           auto& bounds = align_bounds[query_id];
-          if (pos_itr == align_info[*curr].end()) { // If current read not aligned at this position
+          if (pos_itr == align_info[*curr].end()) { // If the position is outside of the read's alignment boundaries
             if (curr->first < bounds.first || curr->first > bounds.second) {  // non overlap 
               base = detail::to_underlying(BaseType::UNKNOWN);
-            } else { // Or gap (at ends of read)
+            } else { // Position unside boundary but for some reasons not aligned to anywhere on the read? 
               base = detail::to_underlying(BaseType::GAP);
             }
           } else {
