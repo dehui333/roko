@@ -110,9 +110,9 @@ Data generate_features(const char* filename, const char* ref,
         auto curr = it + s;
         // In containers that support equivalent keys,         
         // elements with equivalent keys are adjacent to each other in the iteration order of the container.
-        for (auto& align : align_info[*curr]) { // For all the alignments for the position index in the range
-          if (align.second != BaseType::UNKNOWN) { // If base type not unknown
-            valid_aligns.emplace_back(align.first); // Consider the alignment valid
+        for (auto& align : align_info[*curr]) { // For all the reads that has overlap of some base(s) in the window with the reference 
+          if (align.second != BaseType::UNKNOWN) { // If has at least one not UNKNOWN
+            valid_aligns.emplace_back(align.first); // Consider the read valid
           }
         }
       }
@@ -131,9 +131,9 @@ Data generate_features(const char* filename, const char* ref,
         uint8_t value;
 
         if (curr->second != 0)
-          value = detail::to_underlying(BaseType::GAP);
+          value = detail::to_underlying(BaseType::GAP); // Positions after (n, 0) = gap
         else
-          value = detail::to_underlying(get_base(ref[curr->first]));
+          value = detail::to_underlying(get_base(ref[curr->first])); // (n, 0) is the nth base on the reference.
 
         for (int r = 0; r < REF_ROWS; r++) {
           value_ptr = (uint8_t*)PyArray_GETPTR2(X, r, s);
@@ -142,6 +142,7 @@ Data generate_features(const char* filename, const char* ref,
       }
 
       for (int r = REF_ROWS; r < dimensions[0]; r++) {
+        // Sample reads that has at least one non unknown overlap in the window
         std::uint8_t base;
         auto const random_num = rand() % valid_aligns.size();
         std::uint32_t query_id = valid_aligns[random_num];
@@ -154,10 +155,10 @@ Data generate_features(const char* filename, const char* ref,
 
           auto pos_itr = align_info[*curr].find(query_id);
           auto& bounds = align_bounds[query_id];
-          if (pos_itr == align_info[*curr].end()) {
-            if (curr->first < bounds.first || curr->first > bounds.second) {
+          if (pos_itr == align_info[*curr].end()) { // If current read not aligned at this position
+            if (curr->first < bounds.first || curr->first > bounds.second) {  // non overlap 
               base = detail::to_underlying(BaseType::UNKNOWN);
-            } else {
+            } else { // Or gap (at ends of read)
               base = detail::to_underlying(BaseType::GAP);
             }
           } else {
@@ -165,16 +166,16 @@ Data generate_features(const char* filename, const char* ref,
           }
 
           value_ptr = (uint8_t*)PyArray_GETPTR2(X, r, s);
-          *value_ptr = fwd ? base : (base + 6);
+          *value_ptr = fwd ? base : (base + 6); // Insert value into matrix
         }
       }
 
-      data.X.push_back(X);
+      data.X.push_back(X); // Matrix for multiple windows
       data.positions.emplace_back(pos_queue.begin(),
-                                  pos_queue.begin() + dimensions[1]);
+                                  pos_queue.begin() + dimensions[1]); // positions each matrix correspond to 
 
-      for (auto it = pos_queue.begin(), end = pos_queue.begin() + WINDOW;
-           it != end; ++it) {
+      for (auto it = pos_queue.begin(), end = pos_queue.begin() + WINDOW; // Move by WINDOW(this is not same as the window above, 
+           it != end; ++it) {                                             // I prefer to call this step size) positions before next batch
         align_info.erase(*it);
       }
       pos_queue.erase(pos_queue.begin(), pos_queue.begin() + WINDOW);
