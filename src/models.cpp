@@ -15,6 +15,7 @@
 namespace roko {
 
 // what's the purpose of this?!?!
+// -> A function that is used as the argument to bam_mplp_init to create a bam_mplp_t structure
 int iter_bam(void* data, bam1_t* b) {
   int status;
   PileupData* plp_data = (PileupData*)data;
@@ -75,14 +76,15 @@ std::unique_ptr<RegionInfo> parse_region(const std::string& region) {
 
 std::unique_ptr<PositionIterator> BAMFile::pileup(const std::string& region) {
   std::unique_ptr<PileupData> data(new PileupData);
-
+   
+  //Filling up the PileupData struct with content 
   data->file = this->bam_.get();
   data->header = this->header_.get();
   data->iter =
       bam_itr_querys(this->bam_idx_.get(), this->header_.get(), region.c_str());
 
   // Creating multi-iterator
-  auto data_raw = data.get();
+  auto data_raw = data.get(); // The filled up PileupData struct
   bam_mplp_t mplp = bam_mplp_init(1, iter_bam, (void**)&data_raw);
   std::unique_ptr<bam_mplp_s, decltype(&bam_mplp_destroy)> mplp_iter(
       mplp, bam_mplp_destroy);

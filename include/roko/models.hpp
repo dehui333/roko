@@ -14,10 +14,11 @@
 
 namespace roko {
 
+
 struct PileupData {
-  htsFile* file;
-  bam_hdr_t* header;
-  hts_itr_t* iter;
+  htsFile* file; // An abstraction of the alignment file.
+  bam_hdr_t* header; // An abstraction of the header section of the alignment file.
+  hts_itr_t* iter; 
 };
 
 std::int32_t iter_bam(void* data, bam1_t* b);
@@ -32,6 +33,8 @@ enum class BaseType : std::uint8_t { A, C, G, T, GAP, UNKNOWN };
 BaseType get_base(char b) noexcept;
 
 // TODO: meaing of the members?
+// If I'm not wrong, the name is the name of a reference sequence. The begin and end are indices to positions on the reference sequence.
+// This demarcates a "region" where query sequences are mapped to the reference.
 struct RegionInfo {
   RegionInfo(std::string, std::int32_t, std::int32_t);
 
@@ -69,6 +72,7 @@ private:
 
 std::unique_ptr<BAMFile> read_bam(const char*);
 
+// An iterator over Position objects.
 class PositionIterator {
 public:
   friend std::unique_ptr<PositionIterator> BAMFile::pileup(const std::string&);
@@ -93,6 +97,7 @@ protected:
                    std::unique_ptr<RegionInfo>);
 };
 
+// I think each position object corresponds to one position on a reference sequence?
 class Position {
 public:
   int position;
@@ -103,14 +108,16 @@ public:
   int count() { return count_; };
 
 protected:
-  std::string contig_;
+  std::string contig_; // Name of the reference sequence
   int count_;
   int current_ = 0;
-  std::shared_ptr<const bam_pileup1_t*> data_;
+  std::shared_ptr<const bam_pileup1_t*> data_; // Wraps a pointer to alignment object(s).
 
   Position(std::string, int, int, std::shared_ptr<const bam_pileup1_t*>);
 };
 
+// A wrapper over a pointer to an alignment object.
+// An alignment object contains information on one position of a query sequence that is aligned to the reference?..
 class Alignment {
 public:
   friend std::unique_ptr<Alignment> Position::next();
