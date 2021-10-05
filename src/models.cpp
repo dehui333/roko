@@ -15,7 +15,8 @@
 namespace roko {
 
 // what's the purpose of this?!?!
-// -> A function that is used as the argument to bam_mplp_init to create a bam_mplp_t structure
+// Takes in a PileupData object and the information for an alignment and returns a status number.
+// Used in iterating over positions?
 int iter_bam(void* data, bam1_t* b) {
   int status;
   PileupData* plp_data = (PileupData*)data;
@@ -84,7 +85,7 @@ std::unique_ptr<PositionIterator> BAMFile::pileup(const std::string& region) {
       bam_itr_querys(this->bam_idx_.get(), this->header_.get(), region.c_str());
 
   // Creating multi-iterator
-  auto data_raw = data.get(); // The filled up PileupData struct
+  auto data_raw = data.get(); // The wrapped pointer to the PileupData struct
   bam_mplp_t mplp = bam_mplp_init(1, iter_bam, (void**)&data_raw);
   std::unique_ptr<bam_mplp_s, decltype(&bam_mplp_destroy)> mplp_iter(
       mplp, bam_mplp_destroy);

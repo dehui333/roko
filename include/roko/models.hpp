@@ -18,12 +18,14 @@ namespace roko {
 struct PileupData {
   htsFile* file; // An abstraction of the alignment file.
   bam_hdr_t* header; // An abstraction of the header section of the alignment file.
-  hts_itr_t* iter; 
+  hts_itr_t* iter; // An iterator over the above file.
 };
 
 std::int32_t iter_bam(void* data, bam1_t* b);
 
 // what does min mapping quality mean?
+// The min mapping quality and the filter flag are used to determine the status output of iter_bam
+// Guess: to skip over some alignments??
 constexpr std::uint8_t MIN_MAPPING_QUALITY = 10;
 constexpr std::uint16_t FILTER_FLAG =
     BAM_FUNMAP | BAM_FDUP | BAM_FQCFAIL | BAM_FSUPPLEMENTARY | BAM_FSECONDARY;
