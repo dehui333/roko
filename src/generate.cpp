@@ -36,12 +36,12 @@ Data generate_features(const char* filename, const char* ref,
     dims[i] = dimensions[i];
   }
 
-  std::vector<std::pair<std::int64_t, std::int64_t>> pos_queue;
+  std::vector<std::pair<std::int64_t, std::int64_t>> pos_queue; // Position indices on the reference
 
   // positions? alignment for a position?
   std::unordered_map<std::pair<std::int64_t, std::int64_t>, // ?!?!?
                      std::unordered_map<std::uint32_t, BaseType>, pair_hash>
-      align_info;
+      align_info; // Map each position onto aligned bases
 
   std::unordered_map<uint32_t, std::pair<std::int64_t, std::int64_t>>
       align_bounds; // Map each alignment id to where the start and end align to on the reference
@@ -108,18 +108,21 @@ Data generate_features(const char* filename, const char* ref,
 
       for (auto s = 0; s < dimensions[1]; s++) {
         auto curr = it + s;
-        for (auto& align : align_info[*curr]) {
-          if (align.second != BaseType::UNKNOWN) {
-            valid_aligns.emplace_back(align.first);
+        // In containers that support equivalent keys,         
+        // elements with equivalent keys are adjacent to each other in the iteration order of the container.
+        for (auto& align : align_info[*curr]) { // For all the alignments for the position index in the range
+          if (align.second != BaseType::UNKNOWN) { // If base type not unknown
+            valid_aligns.emplace_back(align.first); // Consider the alignment valid
           }
         }
       }
-
+      
+      // Removes duplicate valid aligns
       valid_aligns.erase(std::unique(valid_aligns.begin(), valid_aligns.end()),
                          valid_aligns.end());
       valid_aligns.shrink_to_fit();
 
-      auto X = PyArray_SimpleNew(2, dims, NPY_UINT8);
+      auto X = PyArray_SimpleNew(2, dims, NPY_UINT8); //pointer to uninitialized array of 2 dimensions, the sides given by dims. Type UINT8
       uint8_t* value_ptr;
 
       // First handle assembly (REF_ROWS)

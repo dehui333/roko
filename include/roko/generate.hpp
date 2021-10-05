@@ -25,7 +25,7 @@ constexpr int REF_ROWS = 0;
 
 struct Data {
   std::vector<std::vector<std::pair<std::int64_t, std::int64_t>>> positions;
-  std::vector<PyObject*> X;
+  std::vector<PyObject*> X; //Each is a pointer to an array of 2 dimensions, the sides given by dimensions. Type UINT8
 };
 
 struct pair_hash {
