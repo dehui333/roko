@@ -129,7 +129,7 @@ public:
   int indel() { return read_->indel; };
   BaseType qbase(const std::int32_t) const noexcept;
   uint8_t qqual(int) const noexcept;
-  long ref_start() { return read_->b->core.pos; };
+  long ref_start() { return read_->b->core.pos; }; // position where the 1st base of the alignment on the reference
   long ref_end() { return bam_endpos(read_->b); };
   bool rev() { return bam_is_rev(read_->b); };
 

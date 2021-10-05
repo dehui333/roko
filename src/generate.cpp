@@ -29,9 +29,9 @@ auto constexpr to_underlying(T t) noexcept {
 
 Data generate_features(const char* filename, const char* ref,
                        const char* region) {
-  auto bam = read_bam(filename);
+  auto bam = read_bam(filename); // Abstraction over the bam file 
 
-  npy_intp dims[2];
+  npy_intp dims[2]; // Required type for some argument to create some python object
   for (int i = 0; i < 2; i++) {
     dims[i] = dimensions[i];
   }
@@ -44,26 +44,28 @@ Data generate_features(const char* filename, const char* ref,
       align_info;
 
   std::unordered_map<uint32_t, std::pair<std::int64_t, std::int64_t>>
-      align_bounds;
-  std::unordered_map<uint32_t, std::uint8_t> strand;
+      align_bounds; // Map each alignment id to where the start and end align to on the reference
+  std::unordered_map<uint32_t, std::uint8_t> strand; // Map each alginment id to a bool indicating reverse strand or not
 
   auto data = Data();
 
-  auto pileup_iter = bam->pileup(region);
+  auto pileup_iter = bam->pileup(region); // iterator over positions on a reference
   while (pileup_iter->has_next()) {
-    auto column = pileup_iter->next();
+    auto column = pileup_iter->next(); // All those aligned to the position
 
     
-    const std::int64_t rpos = column->position;
+    const std::int64_t rpos = column->position; // int position on the reference 
     if (rpos < pileup_iter->begin())
+      // Not in the specified region yet
       continue;
     if (rpos >= pileup_iter->end())
+      // Region has ended  
       break;
 
     while (column->has_next()) {
-      auto r = column->next();
+      auto r = column->next(); // An alignment object
 
-      if (r->is_refskip())
+      if (r->is_refskip()) 
         continue;
 
       if (align_bounds.find(r->query_id()) == align_bounds.end()) {
@@ -72,22 +74,22 @@ Data generate_features(const char* filename, const char* ref,
       }
       strand.emplace(r->query_id(), !r->rev());
 
-      std::pair<std::int64_t, std::int64_t> index(rpos, 0);
+      std::pair<std::int64_t, std::int64_t> index(rpos, 0); // The first element is the ref position of the Position object
       if (align_info.find(index) == align_info.end()) {
         pos_queue.emplace_back(rpos, 0);
       }
 
       if (r->is_del()) {
         // DELETION
-        align_info[index].emplace(r->query_id(), BaseType::GAP);
+        align_info[index].emplace(r->query_id(), BaseType::GAP); // To the indexed map, add (alignment id, base type)  
       } else {
         // POSITION
         auto qbase = r->qbase(0);
-        align_info[index].emplace(r->query_id(), qbase);
+        align_info[index].emplace(r->query_id(), qbase); 
 
         // INSERTION
-        for (int i = 1, n = std::min(r->indel(), MAX_INS); i <= n; ++i) {
-          index = std::pair<std::int64_t, std::int64_t>(rpos, i);
+        for (int i = 1, n = std::min(r->indel(), MAX_INS); i <= n; ++i) {// Take the number of insertions, capped at MAX_INS 
+          index = std::pair<std::int64_t, std::int64_t>(rpos, i);        // add to allowance for insertions 
 
           if (align_info.find(index) == align_info.end()) {
             pos_queue.emplace_back(rpos, i);
