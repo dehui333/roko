@@ -6,8 +6,8 @@ from typing import Type
 GAP = '*'
 UNKNOWN = 'N'
 ALPHABET = 'ACGT' + GAP + UNKNOWN
-encoding = {v: i for i, v in enumerate(ALPHABET)}
-decoding = {v: k for k, v in encoding.items()}
+encoding = {v: i for i, v in enumerate(ALPHABET)} # Map alphabets to numbers
+decoding = {v: k for k, v in encoding.items()} # Map numbers to alphabets
 
 AlignPos = namedtuple('AlignPos', ('qpos', 'qbase', 'rpos', 'rbase'))
 Region = namedtuple('Region', ('name', 'start', 'end'))
@@ -36,6 +36,7 @@ def get_aligns(bam, ref_name=None, start=0, end=None):
     filtered = []
 
     with pysam.AlignmentFile(bam, 'rb', index_filename=bam + '.bai') as f:
+        # Each r is an AlignedSegment object
         for r in f.fetch(ref_name, start, end):
             if r.reference_name != ref_name:
                 raise ValueError
@@ -121,7 +122,7 @@ def filter_aligns(aligns, len_threshold=2., ol_threshold=0.5, min_len=1000, star
 def get_pairs(align, ref):
     """This function returns AlignPos information for the given alignment.
 
-    This function yields the pair of (POS, BASE) for the reference and the read.
+    This function yields the pairs of (POS, BASE) for the reference and the read which are aligned.
 
     :param align: An align
     :param ref: Reference
@@ -131,6 +132,7 @@ def get_pairs(align, ref):
     query = align.query_sequence
     if query is None:
         raise StopIteration()
+
 
     for qp, rp in align.get_aligned_pairs():
         rb = ref[rp] if rp is not None else None
@@ -159,15 +161,15 @@ def get_pos_and_labels(align: TargetAlign, ref, region):
     all_pos = []
     all_labels = []
 
-    pairs = get_pairs(align.align, ref)
+    pairs = get_pairs(align.align, ref) # Aligned positions and bases 
     cur_pos, ins_count = None, 0
 
     def p(e):
-        return e.rpos is None or (e.rpos < start)
+        return e.rpos is None or (e.rpos < start) 
 
-    for pair in itertools.dropwhile(p, pairs):
-        if (pair.rpos == align.align.reference_end or
-                (pair.rpos is not None and pair.rpos >= end)):
+    for pair in itertools.dropwhile(p, pairs): # Take, starting from the first position where the ref is not none and within region
+        if (pair.rpos == align.align.reference_end or # One after last aligned position on the reference
+                (pair.rpos is not None and pair.rpos >= end)): # Match outside the region? Should not happen..?
             break
 
         if pair.rpos is None:
@@ -178,7 +180,7 @@ def get_pos_and_labels(align: TargetAlign, ref, region):
         pos = (cur_pos, ins_count)
         all_pos.append(pos)
 
-        label = pair.qbase.upper() if pair.qbase else GAP
+        label = pair.qbase.upper() if pair.qbase else GAP # The query is the ground truth?
         try:
             label = encoding[label]
         except KeyError:

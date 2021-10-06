@@ -8,11 +8,15 @@ from data import DataWriter
 
 ENCODED_UNKNOWN = encoding[UNKNOWN]
 
-GROUP_SIZE = 10000
-NUM_WORKERS = 6
-MAX_INS = 3
+GROUP_SIZE = 10000 # not used?
+NUM_WORKERS = 6 # not used?
+MAX_INS = 3 # not used?
 
-
+'''
+Returns regions of the reference. A sliding window moves across the reference sequence to demarcate the regions, there
+can be overlaps.
+regions are named tuples with the format (reference sequence name, start index, end index). The indices are end-exclusive.
+'''
 def generate_regions(ref, ref_name, window=100_000, overlap=300):
     length = len(ref)
     i = 0
@@ -26,7 +30,9 @@ def generate_regions(ref, ref_name, window=100_000, overlap=300):
         else:
             i = end - overlap
 
-
+'''
+Check if a certain position index is between the first and last bases of a collection of alignments.
+'''
 def is_in_region(pos, aligns):
     for a in aligns:
         if a.start <= pos < a.end:
@@ -35,9 +41,11 @@ def is_in_region(pos, aligns):
 
 
 def generate_train(args):
-    bam_X, bam_Y, ref, region = args
+    bam_X, bam_Y, ref, region = args # regions are named tuples with the format (reference sequence name, start index, end index)
 
-    alignments = get_aligns(bam_Y, ref_name=region.name, start=region.start, end=region.end)
+    # Get mapped and primary alignments within the region
+    alignments = get_aligns(bam_Y, ref_name=region.name, start=region.start, end=region.end)  
+    # Filter based on some criteria
     filtered = filter_aligns(alignments)
 
     print(f'Finished generating labels for {region.name}:{region.start}-{region.end}.')
@@ -112,21 +120,23 @@ def generate_infer(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('ref', type=str)
-    parser.add_argument('X', type=str)
-    parser.add_argument('--Y', type=str, default=None)
-    parser.add_argument('o', type=str)
-    parser.add_argument('--t', type=int, default=1)
+    parser.add_argument('ref', type=str) # reference path
+    parser.add_argument('X', type=str) # path to X bam file
+    parser.add_argument('--Y', type=str, default=None) # path to Y bam file
+    parser.add_argument('o', type=str) # output path
+    parser.add_argument('--t', type=int, default=1) # Number of processes
     args = parser.parse_args()
 
+    # Training if --Y present, else inference.
     inference = False if args.Y else True
     size = 0
 
+    # Parse reference sequences into list of tuples [(id, sequence), (id2, sequence2), ...]
     with open(args.ref, 'r') as handle:
         refs = [(str(r.id), str(r.seq)) for r in SeqIO.parse(handle, 'fasta')]
 
     with DataWriter(args.o, inference) as data:
-        data.write_contigs(refs)
+        data.write_contigs(refs) # Write references to output path
 
         func = generate_infer if inference else generate_train
 
@@ -144,6 +154,7 @@ def main():
                 if not result:
                     continue
                 c, p, x, y = result
+                # name, positions, X, Y
                 data.store(c, p, x, y)
                 finished += 1
 

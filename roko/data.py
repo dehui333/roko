@@ -1,7 +1,9 @@
 import h5py
 import numpy as np
 
-
+'''
+Each storage object contains data to be written to HDF5 files - see h5py.
+'''
 class Storage:
     def __init__(self, name, infer):
         self.name = name
@@ -12,7 +14,7 @@ class Storage:
             self.Y = []
 
         self.infer = infer
-
+    # Extend the internal pos, X, (Y) lists with the arguments 
     def extend(self, pos, X, Y):
         if self.infer:
             assert len(pos) == len(X)
@@ -25,7 +27,8 @@ class Storage:
 
             if not self.infer:
                 self.Y.append(Y[i])
-
+    
+    #Write data to file
     def write(self, f):
         if not self.pos:
             return
@@ -56,10 +59,10 @@ class Storage:
 
 class DataWriter:
     def __init__(self, filename, infer):
-        self.filename = filename
+        self.filename = filename # Filename to write to
         self.infer = infer
 
-        self.storages = dict()
+        self.storages = dict() # Dictionary mapping from reference sequence name to Storage(reference, inference boolean)
 
     def __enter__(self):
         self.fd = h5py.File(self.filename, 'w', swmr=True)
@@ -68,6 +71,7 @@ class DataWriter:
     def __exit__(self, type, value, traceback):
         self.fd.close()
 
+    # Put data into storage objects and prepare for writing
     def store(self, contig, positions, examples, labels):
         try:
             storage = self.storages[contig]
@@ -83,9 +87,10 @@ class DataWriter:
 
     def write_contigs(self, refs):
         contigs_group = self.fd.create_group('contigs')
-
+        
+        # n- name r - the sequence
         for n, r in refs:
-            contig = contigs_group.create_group(n)
-            contig.attrs['name'] = n
+            contig = contigs_group.create_group(n) #/contigs/n
+            contig.attrs['name'] = n 
             contig.attrs['seq'] = r
             contig.attrs['len'] = len(r)
