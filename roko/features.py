@@ -43,7 +43,7 @@ def is_in_region(pos, aligns):
 def generate_train(args):
     bam_X, bam_Y, ref, region = args # regions are named tuples with the format (reference sequence name, start index, end index)
 
-    # Get mapped and primary alignments within the region
+    # Get mapped and primary alignments overlapping with the region
     alignments = get_aligns(bam_Y, ref_name=region.name, start=region.start, end=region.end)  
     # Filter based on some criteria
     filtered = filter_aligns(alignments)
@@ -57,8 +57,8 @@ def generate_train(args):
     positions, examples, labels = [], [], []
 
     for a in filtered:
-        pos_labels = dict()
-        n_pos = set()
+        pos_labels = dict() # Mapping of positions to label
+        n_pos = set() # set of positions with unknown
 
         t_pos, t_labels = get_pos_and_labels(a, ref, region)
         for p, l in zip(t_pos, t_labels):
@@ -68,7 +68,7 @@ def generate_train(args):
                 pos_labels[p] = l
 
         pos_sorted = sorted(list(pos_labels.keys()))
-        region_string = f'{region.name}:{pos_sorted[0][0]+1}-{pos_sorted[-1][0]}'
+        region_string = f'{region.name}:{pos_sorted[0][0]+1}-{pos_sorted[-1][0]}' # region string, 1 index and both sides inclusive
 
         result = gen.generate_features(bam_X, str(ref), region_string)
 
@@ -80,7 +80,7 @@ def generate_train(args):
                 assert is_in_region(p[0], filtered)
 
                 if p in n_pos:
-                    to_yield = False
+                    to_yield = False # Reject window if includes unknown position?
                     break
 
                 try:

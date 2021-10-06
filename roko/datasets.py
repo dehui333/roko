@@ -5,7 +5,7 @@ import h5py
 import numpy as np
 from abc import abstractmethod
 
-
+# Get hdf5 files in directory or just one file
 def get_filenames(path):
     if os.path.isdir(path):
         filenames = []

@@ -167,9 +167,9 @@ def get_pos_and_labels(align: TargetAlign, ref, region):
     def p(e):
         return e.rpos is None or (e.rpos < start) 
 
-    for pair in itertools.dropwhile(p, pairs): # Take, starting from the first position where the ref is not none and within region
-        if (pair.rpos == align.align.reference_end or # One after last aligned position on the reference
-                (pair.rpos is not None and pair.rpos >= end)): # Match outside the region? Should not happen..?
+    for pair in itertools.dropwhile(p, pairs): # Take, starting from the first position where the ref is not none and >= start    
+        if (pair.rpos == align.align.reference_end or # One after last aligned position on the reference?! shouldn't these all be aligned positions?
+                (pair.rpos is not None and pair.rpos >= end)): # Match outside the region?
             break
 
         if pair.rpos is None:
