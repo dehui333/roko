@@ -114,12 +114,12 @@ def train(train_path, out, val_path=None, mem=False, workers=0, batch_size=128):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('train', type=str)
-    parser.add_argument('out', type=str)
-    parser.add_argument('--val', type=str, default=None)
-    parser.add_argument('--memory', action='store_true', default=False)
-    parser.add_argument('--t', type=int, default=0)
-    parser.add_argument('--b', type=int, default=128)
+    parser.add_argument('train', type=str) # path for training data
+    parser.add_argument('out', type=str) # path to store model
+    parser.add_argument('--val', type=str, default=None) # validation path
+    parser.add_argument('--memory', action='store_true', default=False) # in memory
+    parser.add_argument('--t', type=int, default=0) # num workers
+    parser.add_argument('--b', type=int, default=128) # batch size
     args = parser.parse_args()
 
     train(args.train, args.out, args.val, args.memory, args.t, args.b)

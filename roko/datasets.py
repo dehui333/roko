@@ -18,9 +18,9 @@ def get_filenames(path):
     return [path]
 
 class StorageDataset(Dataset):
-    def __init__(self, path, transform=None, read_contigs=False):
+    def __init__(self, path, transform=None, read_contigs=False): # read_contigs not used?
         self.filenames = get_filenames(path)
-        fds = [h5py.File(f, 'r', libver='latest', swmr=True) for f in self.filenames]
+        fds = [h5py.File(f, 'r', libver='latest', swmr=True) for f in self.filenames] # load all files
 
         # For torch workers
         self.fds = None
@@ -30,7 +30,7 @@ class StorageDataset(Dataset):
         self.size = 0
 
         for i, f in enumerate(fds):
-            groups = list(f.keys())
+            groups = list(f.keys()) # get all groups with data
 
             if 'info' in groups:
                 groups.remove('info')
@@ -38,9 +38,9 @@ class StorageDataset(Dataset):
                 groups.remove('contigs')
 
             for g in groups:
-                group_size = f[g].attrs['size']
+                group_size = f[g].attrs['size'] 
                 for j in range(group_size):
-                    self.idx[self.size + j] = (i, g, j)
+                    self.idx[self.size + j] = (i, g, j) # Map 1, 2, 3... to (file index, group, index in group)
                 self.size += group_size
 
         for f in fds:
@@ -48,16 +48,17 @@ class StorageDataset(Dataset):
 
         self.transform = transform
 
+    # get one sample from the specific group
     @abstractmethod
     def get_sample(self, group, offset):
         pass
 
     def __getitem__(self, idx):
-        f_idx, g, p = self.idx[idx]
+        f_idx, g, p = self.idx[idx] # get the associate (file, group, index in group)
 
         # Open fds for the first time
         if not self.fds:
-            self.fds = [h5py.File(f, 'r', swmr=True, libver='latest') for f in self.filenames]
+            self.fds = [h5py.File(f, 'r', swmr=True, libver='latest') for f in self.filenames] # load the files
 
         f = self.fds[f_idx]
         group = f[g]
