@@ -31,7 +31,7 @@ def generate_regions(ref, ref_name, window=100_000, overlap=300):
             i = end - overlap
 
 '''
-Check if a certain position index is between the first and last bases of a collection of alignments. The aligns argument is a list 
+Check if a certain position index is between the first and last bases of any of a collection of alignments. The aligns argument is a list 
 of TargetAlign objects.
 '''
 def is_in_region(pos, aligns):
@@ -46,6 +46,8 @@ Inputs:
     bam_Y: bam file for alignment of truth to ref
     ref: the draft sequence
     region: named tuples with the format (ref name, start index, end index) demarcating a region on the ref
+Output:
+    A tuple (ref name, list of lists of positions , list of feature matrices, list of  )
 
 '''
 def generate_train(args):
@@ -64,42 +66,47 @@ def generate_train(args):
 
     positions, examples, labels = [], [], []
 
-    for a in filtered:
+    for a in filtered: # For every alignment of truth to draft
         pos_labels = dict() # Mapping of positions to label
         n_pos = set() # set of positions with unknown
 
-        t_pos, t_labels = get_pos_and_labels(a, ref, region)
+        t_pos, t_labels = get_pos_and_labels(a, ref, region) # What this alignment says about each of the positions in the region
         for p, l in zip(t_pos, t_labels):
             if l == ENCODED_UNKNOWN:
-                n_pos.add(p)
+                n_pos.add(p) # No information on the position
             else:
                 pos_labels[p] = l
 
         pos_sorted = sorted(list(pos_labels.keys()))
+        
+        # Region where the current alignment has information on 
         region_string = f'{region.name}:{pos_sorted[0][0]+1}-{pos_sorted[-1][0]}' # region string, 1 index and both sides inclusive
 
+        # Generate feature matrix for this region
         # result is a tuple (list of lists of positions, list of matrices)
         result = gen.generate_features(bam_X, str(ref), region_string)
 
+        # P is a list of positions corresponding to columns of the matrix, X is the matrix 
         for P, X in zip(*result):
-            Y = []
+            Y = [] # labels in this window
             to_yield = True
 
             for p in P:
-                assert is_in_region(p[0], filtered)
+                assert is_in_region(p[0], filtered) # At least one alignment should have info on this position
 
                 if p in n_pos:
-                    to_yield = False # Reject window if includes unknown position?
+                    to_yield = False # The current alignment covers the position, but has no info on this position itself
                     break
 
                 try:
                     y_label = pos_labels[p]
                 except KeyError:
                     if p[1] != 0:
-                        y_label = encoding[GAP]
+                        y_label = encoding[GAP] # If the truth has no info on this pos, probably false positive for insertion
                     else:
-                        raise KeyError(f'No label mapping for position {p}.')
-
+                        raise KeyError(f'No label mapping for position {p}.') # For some reason, though the matrix window is contained
+                                                                              # in the region where the alignment has info, there is no label 
+                                                                              # for some position?              
                 Y.append(y_label)
 
             if to_yield:

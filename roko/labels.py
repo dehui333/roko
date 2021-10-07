@@ -15,7 +15,7 @@ Region = namedtuple('Region', ('name', 'start', 'end'))
 
 class TargetAlign:
     def __init__(self, align, start, end, keep=True):
-        self.align = align
+        self.align = align # An AlignedSegment object
         self.start = start # Left most aligned position
         self.end = end # One past right most aligned position
         self.keep = keep
@@ -26,7 +26,7 @@ def get_aligns(bam, ref_name=None, start=0, end=None):
 
     Function removes secondary and unmapped aligns and sorts them by starting position.
 
-    :param bam: A string representing path to a bam file
+    :param bam: A string representing path to a bam file. Aligns true sequence to draft.
     :param ref_name: A string representing the name of a reference sequence
     :param start: An integer representing the start of a region
     :param end: An integer represeting the end of a region
@@ -124,7 +124,7 @@ def get_pairs(align, ref):
 
     This function yields the pairs of (POS, BASE) for the reference and the read which are aligned.
 
-    :param align: An align
+    :param align: An AlignedSegment object
     :param ref: Reference
     :return: An AlignPos object containing the alignment information for the specific position
     """
@@ -139,9 +139,9 @@ def get_pairs(align, ref):
         qb = query[qp] if qp is not None else None
         yield AlignPos(qp, qb, rp, rb)
 
-
+# I guess it is possible that the truth shows there are more insertions at a position than what the reads indicates?
 def get_pos_and_labels(align: TargetAlign, ref, region):
-    """Retruns the positions and the labels for the specific alignment.
+    """Returns the positions and the labels for the specific alignment.
 
     This function returns the positions represented as (POS, INS_NUM) pair and the corresponding labels represented
     as BASE
@@ -161,15 +161,15 @@ def get_pos_and_labels(align: TargetAlign, ref, region):
     all_pos = []
     all_labels = []
 
-    pairs = get_pairs(align.align, ref) # Aligned positions and bases 
+    pairs = get_pairs(align.align, ref) # Aligned positions and bases, AlignPos namedtuple
     cur_pos, ins_count = None, 0
 
     def p(e):
         return e.rpos is None or (e.rpos < start) 
 
-    for pair in itertools.dropwhile(p, pairs): # Take, starting from the first position where the ref is not none and >= start    
-        if (pair.rpos == align.align.reference_end or # One after last aligned position on the reference?! shouldn't these all be aligned positions?
-                (pair.rpos is not None and pair.rpos >= end)): # Match outside the region?
+    for pair in itertools.dropwhile(p, pairs):  # Start from the first position where reference has a value and is within region 
+        if (pair.rpos == align.align.reference_end or # Will this ever be reached..?
+                (pair.rpos is not None and pair.rpos >= end)): # first non none on the ref after the end of the region
             break
 
         if pair.rpos is None:
@@ -180,11 +180,11 @@ def get_pos_and_labels(align: TargetAlign, ref, region):
         pos = (cur_pos, ins_count)
         all_pos.append(pos)
 
-        label = pair.qbase.upper() if pair.qbase else GAP # The query is the ground truth?
+        label = pair.qbase.upper() if pair.qbase else GAP # The query is the ground truth
         try:
             label = encoding[label]
         except KeyError:
-            label = encoding[UNKNOWN]
+            label = encoding[UNKNOWN] # If encoding for the aligned base on the ground truth at the position is not found 
 
         all_labels.append(label)
 
