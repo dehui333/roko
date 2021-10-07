@@ -26,35 +26,45 @@ auto constexpr to_underlying(T t) noexcept {
 }
 
 } // namespace detail
+/*
+Inputs:
+    filename: path to bam file mapping reads to ref(draft sequence)
+    ref: draft sequence
+    region: A string demarcating a region on ref. Format: NAME:START-END or NAME:START. The indices and 1-based and both ends inclusive.
+            if END is not included, goes till end of ref.
+Output:
+    Data struct.
 
+*/
 Data generate_features(const char* filename, const char* ref,
                        const char* region) {
   auto bam = read_bam(filename); // Abstraction over the bam file 
 
-  npy_intp dims[2]; // Required type for some argument to create some python object
+  npy_intp dims[2]; // Required (int) type to create the python matrix object
   for (int i = 0; i < 2; i++) {
     dims[i] = dimensions[i];
   }
 
   std::vector<std::pair<std::int64_t, std::int64_t>> pos_queue; // Position indices on the reference
 
-  // positions? alignment for a position?
-  std::unordered_map<std::pair<std::int64_t, std::int64_t>, // ?!?!?
+  std::unordered_map<std::pair<std::int64_t, std::int64_t>, 
                      std::unordered_map<std::uint32_t, BaseType>, pair_hash>
-      align_info; // Map each position onto aligned bases
+      align_info; // Map each position onto another map, which maps query/read id to bases(which are aligned to the position on the ref)
 
   std::unordered_map<uint32_t, std::pair<std::int64_t, std::int64_t>>
-      align_bounds; // Map each alignment id to where the start and end align to on the reference
-  std::unordered_map<uint32_t, std::uint8_t> strand; // Map each alginment id to a bool indicating reverse strand or not
+      align_bounds; // Map each query id to its first and last aligned position on the ref
+  std::unordered_map<uint32_t, std::uint8_t> strand; // Map each query id to a bool indicating reverse strand or not
 
   auto data = Data();
 
-  auto pileup_iter = bam->pileup(region); // iterator over positions on a reference
+  auto pileup_iter = bam->pileup(region); // iterator over positions on ref
   while (pileup_iter->has_next()) {
-    auto column = pileup_iter->next(); // All those aligned to the position
+    auto column = pileup_iter->next(); // A position object. 
 
     
-    const std::int64_t rpos = column->position; // int position on the reference 
+    const std::int64_t rpos = column->position; // position index on the reference 
+    
+    //I think the checks are not required? Already included in next()?..
     if (rpos < pileup_iter->begin())
       // Not in the specified region yet
       continue;
@@ -65,7 +75,7 @@ Data generate_features(const char* filename, const char* ref,
     while (column->has_next()) {
       auto r = column->next(); // An alignment object
 
-      if (r->is_refskip()) 
+      if (r->is_refskip()) // For this read, no position on the read is aligned to the position on the ref
         continue;
 
       if (align_bounds.find(r->query_id()) == align_bounds.end()) {

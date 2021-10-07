@@ -113,8 +113,9 @@ PositionIterator::PositionIterator(
 bool PositionIterator::has_next() {
   if (processed_) {
     current_next_ =
-        bam_mplp_auto(mplp_iter_.get(), &tid_, &pos_, &count_, pileup_.get());
-    processed_ = false;
+        bam_mplp_auto(mplp_iter_.get(), &tid_, &pos_, &count_, pileup_.get()); // Pretty mysterious..
+    processed_ = false;                                                        // seems like bam_mplp_auto will advance the iterator pointer
+                                                                               // so it will only be called if processed_ is true.
   }
 
   return current_next_ > 0;

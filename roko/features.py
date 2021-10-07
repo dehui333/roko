@@ -15,7 +15,7 @@ MAX_INS = 3 # not used?
 '''
 Returns regions of the reference. A sliding window moves across the reference sequence to demarcate the regions, there
 can be overlaps.
-regions are named tuples with the format (reference sequence name, start index, end index). The indices are end-exclusive.
+regions are named tuples with the format (ref name, start index, end index). The indices are end-exclusive and start at 0.
 '''
 def generate_regions(ref, ref_name, window=100_000, overlap=300):
     length = len(ref)
@@ -31,7 +31,8 @@ def generate_regions(ref, ref_name, window=100_000, overlap=300):
             i = end - overlap
 
 '''
-Check if a certain position index is between the first and last bases of a collection of alignments.
+Check if a certain position index is between the first and last bases of a collection of alignments. The aligns argument is a list 
+of TargetAlign objects.
 '''
 def is_in_region(pos, aligns):
     for a in aligns:
@@ -39,9 +40,16 @@ def is_in_region(pos, aligns):
             return True
     return False
 
+'''
+Inputs: 
+    bam_X: bam file for alignment of reads to ref(the draft assembly)
+    bam_Y: bam file for alignment of truth to ref
+    ref: the draft sequence
+    region: named tuples with the format (ref name, start index, end index) demarcating a region on the ref
 
+'''
 def generate_train(args):
-    bam_X, bam_Y, ref, region = args # regions are named tuples with the format (reference sequence name, start index, end index)
+    bam_X, bam_Y, ref, region = args # regions are named tuples with the format (ref name, start index, end index)
 
     # Get mapped and primary alignments overlapping with the region
     alignments = get_aligns(bam_Y, ref_name=region.name, start=region.start, end=region.end)  

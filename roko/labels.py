@@ -16,8 +16,8 @@ Region = namedtuple('Region', ('name', 'start', 'end'))
 class TargetAlign:
     def __init__(self, align, start, end, keep=True):
         self.align = align
-        self.start = start
-        self.end = end
+        self.start = start # Left most aligned position
+        self.end = end # One past right most aligned position
         self.keep = keep
 
 
