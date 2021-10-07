@@ -18,13 +18,13 @@ static PyObject* generate_features_cpp(PyObject* self, PyObject* args) {
   auto result = roko::generate_features(filename, ref, region);
 
   PyObject* return_tuple = PyTuple_New(2);
-  PyObject* pos_list = PyList_New(result.positions.size());
-  PyObject* X_list = PyList_New(result.X.size());
+  PyObject* pos_list = PyList_New(result.positions.size()); // list of lists of positions 
+  PyObject* X_list = PyList_New(result.X.size()); // list of matrices
 
-  for (int i = 0, size = result.positions.size(); i < size; i++) {
+  for (int i = 0, size = result.positions.size(); i < size; i++) { // Going through position lists for all matrices
     auto& pos_element = result.positions[i];
 
-    PyObject* inner_list = PyList_New(pos_element.size());
+    PyObject* inner_list = PyList_New(pos_element.size()); // List of positions for one matrix in python form
     for (int j = 0, s = pos_element.size(); j < s; j++) {
       PyObject* pos_tuple = PyTuple_New(2);
       PyTuple_SetItem(pos_tuple, 0, PyLong_FromLong(pos_element[j].first));

@@ -30,10 +30,10 @@ auto constexpr to_underlying(T t) noexcept {
 Inputs:
     filename: path to bam file mapping reads to ref(draft sequence)
     ref: draft sequence
-    region: A string demarcating a region on ref. Format: NAME:START-END or NAME:START. The indices and 1-based and both ends inclusive.
+    region: A string demarcating a region on ref. Format: NAME:START-END or NAME:START. The indices are 1-based and both ends inclusive.
             if END is not included, goes till end of ref.
 Output:
-    Data struct.
+    struct Data. Contains feature matrices and corresponding position indices indicating what positions the columns are associated with.
 
 */
 Data generate_features(const char* filename, const char* ref,
@@ -58,6 +58,9 @@ Data generate_features(const char* filename, const char* ref,
   auto data = Data();
 
   auto pileup_iter = bam->pileup(region); // iterator over positions on ref
+  
+  // Iterate through the positions, when associating each position with the bases aligned to it and add to queue to process.
+  // When there is enough positions in the queue, build a feature matrix for one window of positions.
   while (pileup_iter->has_next()) {
     auto column = pileup_iter->next(); // A position object. 
 
@@ -72,6 +75,8 @@ Data generate_features(const char* filename, const char* ref,
       // Region has ended  
       break;
 
+
+    // Associate position with the aligned bases of the reads at the position
     while (column->has_next()) { // Iterating the reads aligned to the region
       auto r = column->next(); // An alignment object
 
@@ -88,7 +93,7 @@ Data generate_features(const char* filename, const char* ref,
       if (align_info.find(index) == align_info.end()) {
         pos_queue.emplace_back(rpos, 0);
       } // If this position on the ref has not been processed, add to queue? I think it makes sense to move this out of this loop?
-        // It seems to be related to position on the ref, not the reads.
+        // It seems to be related to position on the ref, not the reads, which this loop is about.
       
       if (r->is_del()) {
         // DELETION
@@ -113,22 +118,22 @@ Data generate_features(const char* filename, const char* ref,
     }
 
     // BUILD FEATURE MATRIX
-    while (pos_queue.size() >= dimensions[1]) {
-      std::vector<std::uint32_t> valid_aligns;
+    while (pos_queue.size() >= dimensions[1]) { // While there is enough positions for one matrix
+      std::vector<std::uint32_t> valid_aligns; // contains read/query id
       const auto it = pos_queue.begin();
 
       for (auto s = 0; s < dimensions[1]; s++) {
         auto curr = it + s;
-        // In containers that support equivalent keys,         
-        // elements with equivalent keys are adjacent to each other in the iteration order of the container.
-        for (auto& align : align_info[*curr]) { // For all the reads that has overlap of some base(s) in the window with the reference 
+        for (auto& align : align_info[*curr]) { // For all the reads that is aligned with some base(s) in the region with the reference 
           if (align.second != BaseType::UNKNOWN) { // If has at least one not UNKNOWN
             valid_aligns.emplace_back(align.first); // Consider the read valid
           }
         }
       }
       
-      // Removes duplicate valid aligns
+      // Removes duplicate valid read ids:
+      // In containers that support equivalent keys,         
+      // elements with equivalent keys are adjacent to each other in the iteration order of the container.
       valid_aligns.erase(std::unique(valid_aligns.begin(), valid_aligns.end()),
                          valid_aligns.end());
       valid_aligns.shrink_to_fit();
@@ -137,16 +142,17 @@ Data generate_features(const char* filename, const char* ref,
       uint8_t* value_ptr;
 
       // First handle assembly (REF_ROWS)
+      // For one window worth of positions in the queue
       for (auto s = 0; s < dimensions[1]; s++) { // be fancy, decltype?
         auto curr = it + s;
-        uint8_t value;
+        uint8_t value; // Base value on in the position for the ref
 
         if (curr->second != 0)
           value = detail::to_underlying(BaseType::GAP); // Positions after (n, 0) = gap
         else
           value = detail::to_underlying(get_base(ref[curr->first])); // (n, 0) is the nth base on the reference.
 
-        for (int r = 0; r < REF_ROWS; r++) {
+        for (int r = 0; r < REF_ROWS; r++) { // REF_ROWS = 0, this loop not used?
           value_ptr = (uint8_t*)PyArray_GETPTR2(X, r, s);
           *value_ptr = value; // Forward strand - no +6
         }
@@ -164,15 +170,16 @@ Data generate_features(const char* filename, const char* ref,
         for (auto s = 0; s < dimensions[1]; s++) {
           auto curr = it + s;
 
-          auto pos_itr = align_info[*curr].find(query_id);
+          auto pos_itr = align_info[*curr].find(query_id); //find - Is the sampled read aligned at this position?
           auto& bounds = align_bounds[query_id];
-          if (pos_itr == align_info[*curr].end()) { // If the position is outside of the read's alignment boundaries
-            if (curr->first < bounds.first || curr->first > bounds.second) {  // non overlap 
-              base = detail::to_underlying(BaseType::UNKNOWN);
-            } else { // Position unside boundary but for some reasons not aligned to anywhere on the read? 
+          if (pos_itr == align_info[*curr].end()) { // If the sampled read is not aligned at this position
+            if (curr->first < bounds.first || curr->first > bounds.second) {  // Aligned in the region but this position is not covered
+              base = detail::to_underlying(BaseType::UNKNOWN); 
+            } else { // Read has bases aligned to somewhere to the left and right of the current position, but not the current.
               base = detail::to_underlying(BaseType::GAP);
             }
           } else {
+            // If aligned, get the base on the read at the aligned base
             base = detail::to_underlying(pos_itr->second);
           }
 
@@ -183,10 +190,10 @@ Data generate_features(const char* filename, const char* ref,
 
       data.X.push_back(X); // Matrix for multiple windows
       data.positions.emplace_back(pos_queue.begin(),
-                                  pos_queue.begin() + dimensions[1]); // positions each matrix correspond to 
+                                  pos_queue.begin() + dimensions[1]); // positions the current matrix's columns correspond to 
 
-      for (auto it = pos_queue.begin(), end = pos_queue.begin() + WINDOW; // Move by WINDOW(this is not same as the window above, 
-           it != end; ++it) {                                             // I prefer to call this step size) positions before next batch
+      for (auto it = pos_queue.begin(), end = pos_queue.begin() + WINDOW; // Shift the sliding window covering positions on the ref 
+           it != end; ++it) {                                             // may overlap with the previous
         align_info.erase(*it);
       }
       pos_queue.erase(pos_queue.begin(), pos_queue.begin() + WINDOW);

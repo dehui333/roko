@@ -24,8 +24,9 @@ constexpr int MAX_INS = 3;
 constexpr int REF_ROWS = 0;
 
 struct Data {
-  std::vector<std::vector<std::pair<std::int64_t, std::int64_t>>> positions;
-  std::vector<PyObject*> X; //Each is a pointer to an array of 2 dimensions, the sides given by dimensions. Type UINT8
+  std::vector<std::vector<std::pair<std::int64_t, std::int64_t>>> positions; // these are the positions
+                                                                             // the matrix columns correspond to
+  std::vector<PyObject*> X; //Each is a pointer to an array of 2 dimensions(matrix), the sides given by dimensions. Type UINT8
 };
 
 struct pair_hash {

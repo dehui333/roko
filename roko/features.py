@@ -78,6 +78,7 @@ def generate_train(args):
         pos_sorted = sorted(list(pos_labels.keys()))
         region_string = f'{region.name}:{pos_sorted[0][0]+1}-{pos_sorted[-1][0]}' # region string, 1 index and both sides inclusive
 
+        # result is a tuple (list of lists of positions, list of matrices)
         result = gen.generate_features(bam_X, str(ref), region_string)
 
         for P, X in zip(*result):
