@@ -72,7 +72,7 @@ Data generate_features(const char* filename, const char* ref,
       // Region has ended  
       break;
 
-    while (column->has_next()) {
+    while (column->has_next()) { // Iterating the reads aligned to the region
       auto r = column->next(); // An alignment object
 
       if (r->is_refskip()) // For this read, no position on the read is aligned to the position on the ref
@@ -81,17 +81,18 @@ Data generate_features(const char* filename, const char* ref,
       if (align_bounds.find(r->query_id()) == align_bounds.end()) {
         align_bounds.emplace(r->query_id(),
                              std::make_pair(r->ref_start(), r->ref_end()));
-      }
-      strand.emplace(r->query_id(), !r->rev());
+      } // Record the 1st and last aligned positions on the ref for the read, if not done yet.
+      strand.emplace(r->query_id(), !r->rev()); // May be one read can have both directions being aligned?
 
       std::pair<std::int64_t, std::int64_t> index(rpos, 0); // The first element is the ref position of the Position object
       if (align_info.find(index) == align_info.end()) {
         pos_queue.emplace_back(rpos, 0);
-      }
-
+      } // If this position on the ref has not been processed, add to queue? I think it makes sense to move this out of this loop?
+        // It seems to be related to position on the ref, not the reads.
+      
       if (r->is_del()) {
         // DELETION
-        align_info[index].emplace(r->query_id(), BaseType::GAP); // To the indexed map, add (alignment id, base type)  
+        align_info[index].emplace(r->query_id(), BaseType::GAP); // This position has a read indicating GAP  
       } else {
         // POSITION
         auto qbase = r->qbase(0);
@@ -102,11 +103,11 @@ Data generate_features(const char* filename, const char* ref,
           index = std::pair<std::int64_t, std::int64_t>(rpos, i);        // add to allowance for insertions 
 
           if (align_info.find(index) == align_info.end()) {
-            pos_queue.emplace_back(rpos, i);
+            pos_queue.emplace_back(rpos, i); // Once one read has x indels, allocate allowance for x insertions, if <= MAX_INS
           }
 
           qbase = r->qbase(i);
-          align_info[index].emplace(r->query_id(), qbase);
+          align_info[index].emplace(r->query_id(), qbase); // A read indicates there's an insertion at this position
         }
       }
     }
