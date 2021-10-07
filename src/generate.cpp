@@ -172,7 +172,7 @@ Data generate_features(const char* filename, const char* ref,
 
           auto pos_itr = align_info[*curr].find(query_id); //find - Is the sampled read aligned at this position?
           auto& bounds = align_bounds[query_id];
-          if (pos_itr == align_info[*curr].end()) { // If the sampled read is not aligned at this position
+          if (pos_itr == align_info[*curr].end()) { // Is this possible? All ids in valid_aligns comes from align_info[*curr] 
             if (curr->first < bounds.first || curr->first > bounds.second) {  // Aligned in the region but this position is not covered
               base = detail::to_underlying(BaseType::UNKNOWN); 
             } else { // Read has bases aligned to somewhere to the left and right of the current position, but not the current.
