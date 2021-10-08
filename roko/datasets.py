@@ -17,6 +17,7 @@ def get_filenames(path):
 
     return [path]
 
+# A Dataset abstraction over h5py files
 class StorageDataset(Dataset):
     def __init__(self, path, transform=None, read_contigs=False): # read_contigs not used?
         self.filenames = get_filenames(path)
@@ -79,7 +80,7 @@ class TrainDataset(StorageDataset):
 
         return X, Y
 
-
+# Keep all the data in memory instead of fetching when needed
 class InMemoryTrainDataset(Dataset):
     def __init__(self, path, transform=None):
         self.filenames = get_filenames(path)

@@ -117,7 +117,7 @@ def generate_train(args):
     print(f'Finished generating examples for {region.name}:{region.start}-{region.end}.')
     return region.name, positions, examples, labels
 
-
+# Same as above, but without labels
 def generate_infer(args):
     bam_X, ref, region = args
 

@@ -14,7 +14,17 @@ EPOCHS = 100
 LR = 1e-4
 PATIENCE = 7
 
+'''
+    Inputs:
+        train_path: path to training data
+        out: path to store model
+        val_path: path to validation data
+        mem: Keep the training data in memory?
+        workers: num 
+        workers: num of subprocesses for dataloading
+        batch_size: batch size
 
+'''
 def train(train_path, out, val_path=None, mem=False, workers=0, batch_size=128):
     print('Dataset loading')
 
