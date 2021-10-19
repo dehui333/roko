@@ -63,7 +63,6 @@ def generate_train(args):
         region_string = f'{region.name}:{pos_sorted[0][0]+1}-{pos_sorted[-1][0]+1}'
 
         result = gen.generate_features(bam_X, str(ref), region_string)
-
         for P, X in zip(*result):
             Y = []
             to_yield = True
@@ -97,7 +96,7 @@ def generate_train(args):
 def generate_infer(args):
     bam_X, ref, region = args
 
-    region_string = f'{region.name}:{region.start+1}-{region.end}'
+    region_string = f'{region.name}:{region.start+1}-{region.end+1}'
     result = gen.generate_features(bam_X, ref, region_string)
 
     positions, examples = [], []
