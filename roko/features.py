@@ -60,7 +60,7 @@ def generate_train(args):
                 pos_labels[p] = l
 
         pos_sorted = sorted(list(pos_labels.keys()))
-        region_string = f'{region.name}:{pos_sorted[0][0]+1}-{pos_sorted[-1][0]}'
+        region_string = f'{region.name}:{pos_sorted[0][0]+1}-{pos_sorted[-1][0]+1}'
 
         result = gen.generate_features(bam_X, str(ref), region_string)
 
