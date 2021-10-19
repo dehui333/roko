@@ -66,6 +66,18 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
             if (r->is_del()) {
                 // DELETION
                 align_info[index].emplace(r->query_id(), PosInfo(Bases::GAP));
+                
+                // INSERTION
+                for (int i = 0, n = std::min(r->indel(), MAX_INS); i <= n; ++i) {
+                    index = std::pair<long, long>(rpos, i);
+
+                    if (align_info.find(index) == align_info.end()) {
+                        pos_queue.emplace_back(rpos, i);
+                    }
+
+                    qbase = r->qbase(i);
+                    align_info[index].emplace(r->query_id(), PosInfo(qbase));
+                }
             } else {
                 // POSITION
                 auto qbase = r->qbase(0);
