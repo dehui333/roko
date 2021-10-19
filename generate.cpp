@@ -75,7 +75,7 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
                         pos_queue.emplace_back(rpos, i);
                     }
 
-                    qbase = r->qbase(i);
+                    auto qbase = r->qbase(i);
                     align_info[index].emplace(r->query_id(), PosInfo(qbase));
                 }
             } else {
