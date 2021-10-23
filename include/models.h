@@ -110,6 +110,7 @@ public:
     long ref_start() {return read_->b->core.pos;};
     long ref_end() {return bam_endpos(read_->b);};
     bool rev() {return bam_is_rev(read_->b);};
+    uint8_t mq() {return read_->b->core.qual;};
 
 protected:
     const bam_pileup1_t* read_;

@@ -17,6 +17,7 @@ extern "C" {
 
 
 constexpr int dimensions[] = {200, 90};
+constexpr int dimensions2[] = {2, 90};
 constexpr int CENTER = dimensions[1] / 2;
 constexpr int WINDOW = dimensions[1] / 3;
 constexpr int MAX_INS = 3;
@@ -26,7 +27,20 @@ constexpr float INS_READ_PROP_THRESHOLD = 0.1;
 struct Data{
     std::vector<std::vector<std::pair<long, long>>> positions;
     std::vector<PyObject*> X;
+    std::vector<PyObject*> X2;
 };
+
+struct PosStats {
+    uint8_t avg_mq;
+    uint8_t n_mq;
+    uint8_t avg_pq;
+    uint8_t n_pq;
+    
+    PosStats() : avg_mq(0), n_mq(0), avg_pq(0), n_pq(0) {};
+    void update_mq(uint8_t mq) {n_mq++; avg_mq += (mq-avg_mq)/n_mq; };
+    void update_pq(uint8_t pq) {n_pq++; avg_pq += (pq-avg_pq)/n_pq; };
+};
+
 
 struct PosInfo{
     Bases base;

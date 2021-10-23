@@ -16,10 +16,10 @@ static PyObject* generate_features_cpp(PyObject *self, PyObject *args) {
 
     auto result = generate_features(filename, ref, region);
 
-    PyObject* return_tuple = PyTuple_New(2);
+    PyObject* return_tuple = PyTuple_New(3);
     PyObject* pos_list = PyList_New(result->positions.size());
     PyObject* X_list = PyList_New(result->X.size());
-
+    PyObject* X2_list = PyList_New(result->X2.size());
     for (int i = 0, size=result->positions.size(); i < size; i++) {
         auto& pos_element = result->positions[i];
 
@@ -34,11 +34,13 @@ static PyObject* generate_features_cpp(PyObject *self, PyObject *args) {
         PyList_SetItem(pos_list, i, inner_list);
 
         PyList_SetItem(X_list, i, result->X[i]);
+        PyList_SetItem(X2_list, i, result->X2[i]);
     }
  
     PyTuple_SetItem(return_tuple, 0, pos_list);
     PyTuple_SetItem(return_tuple, 1, X_list);
-
+    PyTuple_SetItem(return_tuple, 2, X2_list);
+    
     return return_tuple;
 }
 

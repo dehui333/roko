@@ -29,14 +29,17 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
     auto bam = readBAM(filename);
 
     npy_intp dims[2];
+    npy_intp dims2[2];
     for (int i = 0; i < 2; i++) {
         dims[i] = dimensions[i];
+        dims2[i] = dimensions2[i];
     }
 
     std::vector<std::pair<long, long>> pos_queue;
     std::unordered_map<std::pair<long, long>, std::unordered_map<uint32_t, PosInfo>, pair_hash> align_info;
     std::unordered_map<uint32_t, std::pair<long, long>> align_bounds;
     std::unordered_map<uint32_t, bool> strand;
+    std::unordered_map<std::pair<long, long>, PosStats, pair_hash> stats_info;
 
     auto data = std::unique_ptr<Data>(new Data());
 
@@ -47,7 +50,7 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
         long rpos = column->position;
         
         
-        int ins_read_num_threshold = 2;
+        unsigned int ins_read_num_threshold = 2;
         if (rpos < pileup_iter->start()) continue;
         if (rpos >= pileup_iter->end()) break;
 
@@ -80,7 +83,8 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
                     if (align_info[index].size() == ins_read_num_threshold) {
                        pos_queue.emplace_back(rpos, i);    
                     }
-                    
+                    stats_info[index].update_pq(r->qqual(i-1));
+                    stats_info[index].update_mq(r->mq());
 
                     
                 }
@@ -88,6 +92,8 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
                 // POSITION
                 auto qbase = r->qbase(0);
                 align_info[index].emplace(r->query_id(), PosInfo(qbase));
+                stats_info[index].update_pq(r->qqual(0));
+                stats_info[index].update_mq(r->mq());
 
                 // INSERTION
                 for (int i = 1, n = r->indel(); i <= n; ++i) {
@@ -98,6 +104,8 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
                     if (align_info[index].size() == ins_read_num_threshold) {
                        pos_queue.emplace_back(rpos, i);    
                     }
+                    stats_info[index].update_pq(r->qqual(i));
+                    stats_info[index].update_mq(r->mq());
 
                     
                 }
@@ -122,6 +130,7 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
             int valid_size = valid.size();
 
             auto X = PyArray_SimpleNew(2, dims, NPY_UINT8);
+            auto X2 = PyArray_SimpleNew(2, dims2, NPY_UINT8);
             uint8_t* value_ptr;
 
             // First handle assembly (REF_ROWS) << I think this is obsolete
@@ -135,6 +144,16 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
                     value_ptr = (uint8_t*) PyArray_GETPTR2(X, r, s);
                     *value_ptr = value; // Forward strand - no +6
                 }
+            }
+            
+            //fill up X2 
+            for (auto s = 0; s < dimensions[1]; s++) {
+                auto curr = it + s;
+                auto pos_stats = stats_info[*curr];
+                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 0, s);
+                *value_ptr = pos_stats.avg_mq;
+                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 1, s);
+                *value_ptr = pos_stats.avg_pq;
             }
 
             for (int r = REF_ROWS; r < dimensions[0]; r++) {
@@ -166,6 +185,7 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
             }
 
             data->X.push_back(X);
+            data->X2.push_back(X2);
             data->positions.emplace_back(pos_queue.begin(), pos_queue.begin() + dimensions[1]);
 
             for (auto it = pos_queue.begin(), end = pos_queue.begin() + WINDOW; it != end; ++it) {
