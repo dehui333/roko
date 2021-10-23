@@ -21,6 +21,7 @@ constexpr int CENTER = dimensions[1] / 2;
 constexpr int WINDOW = dimensions[1] / 3;
 constexpr int MAX_INS = 3;
 constexpr int REF_ROWS = 0;
+constexpr float INS_READ_PROP_THRESHOLD = 0.1;
 
 struct Data{
     std::vector<std::vector<std::pair<long, long>>> positions;

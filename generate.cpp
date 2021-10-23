@@ -45,6 +45,9 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
         auto column = pileup_iter->next();
 
         long rpos = column->position;
+        
+        
+        int ins_read_num_threshold = 2;
         if (rpos < pileup_iter->start()) continue;
         if (rpos >= pileup_iter->end()) break;
 
@@ -68,15 +71,18 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
                 align_info[index].emplace(r->query_id(), PosInfo(Bases::GAP));
                 
                 // INSERTION
-                for (int i = 0, n = std::min(r->indel(), MAX_INS); i <= n; ++i) {
+                for (int i = 1, n = r->indel(); i <= n; ++i) {
                     index = std::pair<long, long>(rpos, i);
-
-                    if (align_info.find(index) == align_info.end()) {
-                        pos_queue.emplace_back(rpos, i);
-                    }
-
-                    auto qbase = r->qbase(i);
+                    
+                    auto qbase = r->qbase(i-1);
                     align_info[index].emplace(r->query_id(), PosInfo(qbase));
+                                         
+                    if (align_info[index].size() == ins_read_num_threshold) {
+                       pos_queue.emplace_back(rpos, i);    
+                    }
+                    
+
+                    
                 }
             } else {
                 // POSITION
@@ -84,15 +90,16 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
                 align_info[index].emplace(r->query_id(), PosInfo(qbase));
 
                 // INSERTION
-                for (int i = 1, n = std::min(r->indel(), MAX_INS); i <= n; ++i) {
+                for (int i = 1, n = r->indel(); i <= n; ++i) {
                     index = std::pair<long, long>(rpos, i);
-
-                    if (align_info.find(index) == align_info.end()) {
-                        pos_queue.emplace_back(rpos, i);
-                    }
-
                     qbase = r->qbase(i);
                     align_info[index].emplace(r->query_id(), PosInfo(qbase));
+                                         
+                    if (align_info[index].size() == ins_read_num_threshold) {
+                       pos_queue.emplace_back(rpos, i);    
+                    }
+
+                    
                 }
             }
         }
@@ -117,7 +124,7 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
             auto X = PyArray_SimpleNew(2, dims, NPY_UINT8);
             uint8_t* value_ptr;
 
-            // First handle assembly (REF_ROWS)
+            // First handle assembly (REF_ROWS) << I think this is obsolete
             for (auto s = 0; s < dimensions[1]; s++) {
                 auto curr = it + s; uint8_t value;
 
