@@ -84,9 +84,7 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
                     if (align_info[index].size() == ins_read_num_threshold || (ins_read_num_threshold == 0 && align_info[index].size() == 1)) {
                        pos_queue.emplace_back(rpos, i);    
                     }
-                    stats_info[index].update_pq(r->qqual(i-1));
-                    stats_info[index].update_mq(r->mq());
-                    
+
                     switch(qbase){
                         case Bases::A:
                             stats_info[index].n_A++;
@@ -108,8 +106,8 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
                 // POSITION
                 auto qbase = r->qbase(0);
                 align_info[index].emplace(r->query_id(), PosInfo(qbase));
-                stats_info[index].update_pq(r->qqual(0));
-                stats_info[index].update_mq(r->mq());
+
+                
                 switch(qbase) {
                     case Bases::A:
                         stats_info[index].n_A++;
@@ -126,7 +124,7 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
                     default:
                         std::cout << "SHOULD NOT GET HERE" << std::endl;        
                 }         
-
+                    
                 // INSERTION
                 for (int i = 1, n = r->indel(); i <= n; ++i) {
                     index = std::pair<long, long>(rpos, i);
@@ -136,9 +134,7 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
                     if (align_info[index].size() == ins_read_num_threshold || (ins_read_num_threshold == 0 && align_info[index].size() == 1)) {
                        pos_queue.emplace_back(rpos, i);    
                     }
-                    stats_info[index].update_pq(r->qqual(i));
-                    stats_info[index].update_mq(r->mq());
-                    
+
                     switch(qbase) {
                         case Bases::A:
                             stats_info[index].n_A++;
@@ -198,22 +194,19 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
             for (auto s = 0; s < dimensions[1]; s++) {
                 auto curr = it + s;
                 auto pos_stats = stats_info[*curr];
-                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 0, s);
-                *value_ptr = pos_stats.avg_mq;
-                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 1, s);
-                *value_ptr = pos_stats.avg_pq;
-                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 2, s);
-                *value_ptr = pos_stats.n_del;
-                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 3, s);
-                *value_ptr = pos_stats.n_A;
-                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 4, s);
-                *value_ptr = pos_stats.n_C;
-                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 5, s);
-                *value_ptr = pos_stats.n_G;
-                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 6, s);
-                *value_ptr = pos_stats.n_T;
-            }
 
+                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 0, s);
+                *value_ptr = pos_stats.n_del;
+                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 1, s);
+                *value_ptr = pos_stats.n_A;
+                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 2, s);
+                *value_ptr = pos_stats.n_C;
+                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 3, s);
+                *value_ptr = pos_stats.n_G;
+                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 4, s);
+                *value_ptr = pos_stats.n_T;
+                
+            }
             for (int r = REF_ROWS; r < dimensions[0]; r++) {
                 uint8_t base;
                 auto random_num = rand() % valid_size;
@@ -251,6 +244,7 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
             }
             pos_queue.erase(pos_queue.begin(), pos_queue.begin() + WINDOW);
         }
+        //std::cout << "END LOOP" << std::endl;
     }
 
     return data;

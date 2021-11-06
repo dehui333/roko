@@ -17,7 +17,7 @@ extern "C" {
 
 
 constexpr int dimensions[] = {200, 90};
-constexpr int dimensions2[] = {7, 90};
+constexpr int dimensions2[] = {5, 90};
 constexpr int CENTER = dimensions[1] / 2;
 constexpr int WINDOW = dimensions[1] / 3;
 constexpr int MAX_INS = 3;
@@ -31,11 +31,7 @@ struct Data{
 };
 
 struct PosStats {
-    uint8_t avg_mq = 0;
-    uint8_t n_mq = 0;
-    uint8_t avg_pq = 0;
-    uint8_t n_pq = 0;
-    
+
     uint8_t n_del = 0;
     uint8_t n_A = 0;
     uint8_t n_C = 0;
@@ -43,8 +39,8 @@ struct PosStats {
     uint8_t n_T = 0;
     
     //PosStats() : avg_mq(0), n_mq(0), avg_pq(0), n_pq(0) {};
-    void update_mq(uint8_t mq) {n_mq++; avg_mq += (mq-avg_mq)/n_mq; };
-    void update_pq(uint8_t pq) {n_pq++; avg_pq += (pq-avg_pq)/n_pq; };
+    
+    
 };
 
 

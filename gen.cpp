@@ -17,6 +17,7 @@ static PyObject* generate_features_cpp(PyObject *self, PyObject *args) {
     auto result = generate_features(filename, ref, region);
 
     PyObject* return_tuple = PyTuple_New(3);
+    //PyObject* return_tuple = PyTuple_New(2);
     PyObject* pos_list = PyList_New(result->positions.size());
     PyObject* X_list = PyList_New(result->X.size());
     PyObject* X2_list = PyList_New(result->X2.size());

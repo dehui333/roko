@@ -6,6 +6,7 @@ from multiprocessing import Pool
 import gen
 from data import DataWriter
 
+
 ENCODED_UNKNOWN = encoding[UNKNOWN]
 
 GROUP_SIZE = 10000
@@ -61,7 +62,6 @@ def generate_train(args):
 
         pos_sorted = sorted(list(pos_labels.keys()))
         region_string = f'{region.name}:{pos_sorted[0][0]+1}-{pos_sorted[-1][0]+1}'
-
         result = gen.generate_features(bam_X, str(ref), region_string)
         for P, X, X2 in zip(*result):
             Y = []
@@ -83,14 +83,13 @@ def generate_train(args):
                         raise KeyError(f'No label mapping for position {p}.')
 
                 Y.append(y_label)
-
+            
             if to_yield:
                 positions.append(P)
                 examples.append(X)
                 labels.append(Y)
                 pos_stats.append(X2)
                 
-
     print(f'Finished generating examples for {region.name}:{region.start}-{region.end}.')
     return region.name, positions, examples, labels, pos_stats
 
