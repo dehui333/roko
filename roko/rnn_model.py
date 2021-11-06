@@ -37,10 +37,10 @@ class RNN(nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
 
-        self.gru = nn.GRU(in_size, hidden_size, num_layers=num_layers,
+        self.gru = nn.GRU(in_size+5, hidden_size, num_layers=num_layers,
                           batch_first=True, bidirectional=True, dropout=dropout)
         gru_init(self.gru)
-
+        
         self.fc4 = nn.Linear(2 * hidden_size, 5)
 
     def forward(self, x, x2):
@@ -52,8 +52,9 @@ class RNN(nn.Module):
 
         x = F.relu(self.fc2(x))
         x = self.do2(x)
-
+        x2 = torch.transpose(x2, 1, 2)
         x = x.reshape(-1, 90, IN_SIZE)
+        x = torch.cat([x, x2], 2)
         x, _ = self.gru(x)
 
         return self.fc4(x)

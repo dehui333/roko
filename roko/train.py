@@ -40,7 +40,7 @@ def train(train_path, out, val_path=None, mem=False, workers=0, batch_size=128):
 
     def step(engine, batch):
         x, y, x2 = batch
-        x, y, x2 = x.type(torch.cuda.LongTensor if device.type == 'cuda' else torch.LongTensor), y.to(device), x2.type(torch.cuda.LongTensor if device.type == 'cuda' else torch.LongTensor)
+        x, y, x2 = x.type(torch.cuda.LongTensor if device.type == 'cuda' else torch.LongTensor), y.to(device), x2.type(torch.cuda.FloatTensor if device.type == 'cuda' else torch.FloatTensor)
 
 
         model.train()
