@@ -50,7 +50,7 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
         long rpos = column->position;
         
         
-        unsigned int ins_read_num_threshold = 2;
+        unsigned int ins_read_num_threshold = INS_READ_PROP_THRESHOLD * column->count();
         if (rpos < pileup_iter->start()) continue;
         if (rpos >= pileup_iter->end()) break;
 
@@ -72,21 +72,37 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
             if (r->is_del()) {
                 // DELETION
                 align_info[index].emplace(r->query_id(), PosInfo(Bases::GAP));
+                stats_info[index].n_del++;
                 
-                // INSERTION
+                // INSERTIONS AFTER THE DEL
                 for (int i = 1, n = r->indel(); i <= n; ++i) {
                     index = std::pair<long, long>(rpos, i);
                     
                     auto qbase = r->qbase(i-1);
                     align_info[index].emplace(r->query_id(), PosInfo(qbase));
                                          
-                    if (align_info[index].size() == ins_read_num_threshold) {
+                    if (align_info[index].size() == ins_read_num_threshold || (ins_read_num_threshold == 0 && align_info[index].size() == 1)) {
                        pos_queue.emplace_back(rpos, i);    
                     }
                     stats_info[index].update_pq(r->qqual(i-1));
                     stats_info[index].update_mq(r->mq());
-
                     
+                    switch(qbase){
+                        case Bases::A:
+                            stats_info[index].n_A++;
+                        break;
+                        case Bases::C:
+                            stats_info[index].n_C++;
+                        break;
+                        case Bases::G:
+                            stats_info[index].n_G++;
+                        break;
+                        case Bases::T:
+                            stats_info[index].n_T++;
+                        break;
+                        default:
+                            std::cout << "SHOULD NOT GET HERE" << std::endl;
+                   }
                 }
             } else {
                 // POSITION
@@ -94,6 +110,22 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
                 align_info[index].emplace(r->query_id(), PosInfo(qbase));
                 stats_info[index].update_pq(r->qqual(0));
                 stats_info[index].update_mq(r->mq());
+                switch(qbase) {
+                    case Bases::A:
+                        stats_info[index].n_A++;
+                    break;
+                    case Bases::C:
+                        stats_info[index].n_C++;
+                    break;
+                    case Bases::G:
+                        stats_info[index].n_G++;
+                    break;
+                    case Bases::T:
+                        stats_info[index].n_T++;
+                    break;
+                    default:
+                        std::cout << "SHOULD NOT GET HERE" << std::endl;        
+                }         
 
                 // INSERTION
                 for (int i = 1, n = r->indel(); i <= n; ++i) {
@@ -101,12 +133,28 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
                     qbase = r->qbase(i);
                     align_info[index].emplace(r->query_id(), PosInfo(qbase));
                                          
-                    if (align_info[index].size() == ins_read_num_threshold) {
+                    if (align_info[index].size() == ins_read_num_threshold || (ins_read_num_threshold == 0 && align_info[index].size() == 1)) {
                        pos_queue.emplace_back(rpos, i);    
                     }
                     stats_info[index].update_pq(r->qqual(i));
                     stats_info[index].update_mq(r->mq());
-
+                    
+                    switch(qbase) {
+                        case Bases::A:
+                            stats_info[index].n_A++;
+                        break;
+                        case Bases::C:
+                            stats_info[index].n_C++;
+                        break;
+                        case Bases::G:
+                            stats_info[index].n_G++;
+                        break;
+                        case Bases::T:
+                            stats_info[index].n_T++;
+                        break;
+                        default:
+                            std::cout << "SHOULD NOT GET HERE" << std::endl;        
+                    }
                     
                 }
             }
@@ -154,6 +202,16 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
                 *value_ptr = pos_stats.avg_mq;
                 value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 1, s);
                 *value_ptr = pos_stats.avg_pq;
+                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 2, s);
+                *value_ptr = pos_stats.n_del;
+                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 3, s);
+                *value_ptr = pos_stats.n_A;
+                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 4, s);
+                *value_ptr = pos_stats.n_C;
+                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 5, s);
+                *value_ptr = pos_stats.n_G;
+                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 6, s);
+                *value_ptr = pos_stats.n_T;
             }
 
             for (int r = REF_ROWS; r < dimensions[0]; r++) {

@@ -46,7 +46,7 @@ def generate_train(args):
         print('No alignments.')
         return None
 
-    positions, examples, labels = [], [], []
+    positions, examples, labels, pos_stats = [], [], [], []
 
     for a in filtered:
         pos_labels = dict()
@@ -63,7 +63,7 @@ def generate_train(args):
         region_string = f'{region.name}:{pos_sorted[0][0]+1}-{pos_sorted[-1][0]+1}'
 
         result = gen.generate_features(bam_X, str(ref), region_string)
-        for P, X in zip(*result):
+        for P, X, X2 in zip(*result):
             Y = []
             to_yield = True
 
@@ -88,9 +88,11 @@ def generate_train(args):
                 positions.append(P)
                 examples.append(X)
                 labels.append(Y)
+                pos_stats.append(X2)
+                
 
     print(f'Finished generating examples for {region.name}:{region.start}-{region.end}.')
-    return region.name, positions, examples, labels
+    return region.name, positions, examples, labels, pos_stats
 
 
 def generate_infer(args):
@@ -99,14 +101,15 @@ def generate_infer(args):
     region_string = f'{region.name}:{region.start+1}-{region.end+1}'
     result = gen.generate_features(bam_X, ref, region_string)
 
-    positions, examples = [], []
+    positions, examples, pos_stats = [], [], []
 
-    for P, X in zip(*result):
+    for P, X, X2 in zip(*result):
         positions.append(P)
         examples.append(X)
+        pos_stats.append(X2)
 
     print(f'Finished generating examples for {region.name}:{region.start}-{region.end}.')
-    return region.name, positions, examples, None
+    return region.name, positions, examples, None, pos_stats
 
 
 def main():
