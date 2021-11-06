@@ -145,8 +145,8 @@ def main():
             for result in pool.imap(func, arguments):
                 if not result:
                     continue
-                c, p, x, y = result
-                data.store(c, p, x, y)
+                c, p, x, y, s = result
+                data.store(c, p, x, y, s)
                 finished += 1
 
                 if finished % 10 == 0:

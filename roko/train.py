@@ -39,14 +39,14 @@ def train(train_path, out, val_path=None, mem=False, workers=0, batch_size=128):
     optim = torch.optim.Adam(model.parameters(), lr=LR)
 
     def step(engine, batch):
-        x, y = batch
-        x, y = x.type(torch.cuda.LongTensor if device.type == 'cuda' else torch.LongTensor), y.to(device)
+        x, y, x2 = batch
+        x, y, x2 = x.type(torch.cuda.LongTensor if device.type == 'cuda' else torch.LongTensor), y.to(device), x2.type(torch.cuda.LongTensor if device.type == 'cuda' else torch.LongTensor)
 
 
         model.train()
         model.zero_grad()
 
-        output = model(x).transpose(1, 2)
+        output = model(x, x2).transpose(1, 2)
         loss = F.cross_entropy(output, y)
 
         loss.backward()
@@ -57,10 +57,10 @@ def train(train_path, out, val_path=None, mem=False, workers=0, batch_size=128):
     def eval(engine, batch):
         model.eval()
         with torch.no_grad():
-            x, y = batch
-            x, y = x.type(torch.cuda.LongTensor if device.type == 'cuda' else torch.LongTensor), y.to(device)
+            x, y, x2 = batch
+            x, y, x2 = x.type(torch.cuda.LongTensor if device.type == 'cuda' else torch.LongTensor), y.to(device), x2.type(torch.cuda.LongTensor if device.type == 'cuda' else torch.LongTensor)
 
-            out = model(x).transpose(1, 2)
+            out = model(x, x2).transpose(1, 2)
             return out, y
 
     trainer = Engine(step)

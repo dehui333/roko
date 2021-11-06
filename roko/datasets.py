@@ -75,8 +75,9 @@ class TrainDataset(StorageDataset):
     def get_sample(self, group, offset):
         X = group['examples'][offset]
         Y = group['labels'][offset]
+        X2 = group['stats'][offset]
 
-        return X, Y
+        return X, Y, X2
 
 
 class InMemoryTrainDataset(Dataset):
@@ -85,6 +86,7 @@ class InMemoryTrainDataset(Dataset):
 
         self.X = []
         self.Y = []
+        self.X2 = []
 
         for filename in self.filenames:
             with h5py.File(filename, 'r') as f:
@@ -97,19 +99,19 @@ class InMemoryTrainDataset(Dataset):
                 for g in groups:
                     X = f[g]['examples'][()]
                     Y = f[g]['labels'][()]
-
+                    X2 = f[g]['stats'][()]
                     self.X.extend(list(X))
                     self.Y.extend(list(Y))
-
+                    self.X2.extend(list(X2))
             print(f'Processed: {filename}')
 
-        assert len(self.X) == len(self.Y)
+        assert len(self.X) == len(self.Y) == len(self.X2)
         self.size = len(self.X)
 
         self.transform = transform
 
     def __getitem__(self, idx):
-        sample = (self.X[idx], self.Y[idx])
+        sample = (self.X[idx], self.Y[idx], self.X2[idx])
         if self.transform:
             sample = self.transform(sample)
 
@@ -121,5 +123,5 @@ class InMemoryTrainDataset(Dataset):
 
 class TrainToTensor:
     def __call__(self, sample):
-        X, Y = sample
-        return torch.from_numpy(X), torch.from_numpy(Y)
+        X, Y, X2 = sample
+        return torch.from_numpy(X), torch.from_numpy(Y), torch.from_numpy(X2)

@@ -43,7 +43,7 @@ class RNN(nn.Module):
 
         self.fc4 = nn.Linear(2 * hidden_size, 5)
 
-    def forward(self, x):
+    def forward(self, x, x2):
         x = self.do(self.embedding(x))
         x = x.permute((0, 2, 3, 1))
 
