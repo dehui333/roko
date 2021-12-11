@@ -14,9 +14,9 @@ def configuration(parent_package='', top_path=None):
                              top_path)
       config.add_extension('gen',
                            ['gen.cpp', 'generate.cpp', 'models.cpp'],
-                           extra_objects=['Dependencies/htslib-1.9/libhts.a'],
+                           extra_objects=['Dependencies/htslib-1.9/libhts.a', '/home/lindehui/miniconda3/envs/py37/lib/libdeflate.so'],
                            extra_compile_args=['-std=c++14'], language='c++',
-                           extra_link_args=['-lz', '-llzma', '-lbz2', '-lz', '-lm', '-lpthread', '-lcurl', '-lcrypto'],
+                           extra_link_args=['-lz', '-lz', '-lm', '-lpthread', '-lcurl', '-lcrypto'],
                            include_dirs=['Dependencies/htslib-1.9/htslib', 'include'])
 
       return config

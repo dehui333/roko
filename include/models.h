@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <string>
+#include <stdexcept>
 
 extern "C" {
     #include "sam.h"

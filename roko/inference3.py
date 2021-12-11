@@ -6,7 +6,7 @@ from collections import defaultdict, Counter
 import argparse
 from torch.utils.data import Dataset, DataLoader
 import itertools
-from rnn_model import *
+from rnn_model3 import *
 import numpy as np
 
 GPU_NUM = 1

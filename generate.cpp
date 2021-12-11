@@ -50,8 +50,10 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
         long rpos = column->position;
         
         
-        unsigned int ins_read_num_threshold = INS_READ_PROP_THRESHOLD * column->count();
-        if (rpos < pileup_iter->start()) continue;
+        //unsigned int ins_read_num_threshold = INS_READ_PROP_THRESHOLD * column->count();
+        unsigned int ins_read_num_threshold = 1;
+	if (ins_read_num_threshold < 1) ins_read_num_threshold = 1;
+       	if (rpos < pileup_iter->start()) continue;
         if (rpos >= pileup_iter->end()) break;
 
         while(column->has_next()) {
@@ -75,15 +77,16 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
                 stats_info[index].n_del++;
                 
                 // INSERTIONS AFTER THE DEL
+		/* 
                 for (int i = 1, n = r->indel(); i <= n; ++i) {
-                    index = std::pair<long, long>(rpos, i);
-                    
+		    index = std::pair<long, long>(rpos, i);                  
                     auto qbase = r->qbase(i-1);
                     align_info[index].emplace(r->query_id(), PosInfo(qbase));
-                                         
+                    
+                
                     if (align_info[index].size() == ins_read_num_threshold || (ins_read_num_threshold == 0 && align_info[index].size() == 1)) {
                        pos_queue.emplace_back(rpos, i);    
-                    }
+                    } 
 
                     switch(qbase){
                         case Bases::A:
@@ -101,7 +104,7 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
                         default:
                             std::cout << "SHOULD NOT GET HERE" << std::endl;
                    }
-                }
+                }*/
             } else {
                 // POSITION
                 auto qbase = r->qbase(0);
@@ -127,13 +130,16 @@ std::unique_ptr<Data> generate_features(const char* filename, const char* ref, c
                     
                 // INSERTION
                 for (int i = 1, n = r->indel(); i <= n; ++i) {
-                    index = std::pair<long, long>(rpos, i);
-                    qbase = r->qbase(i);
+                    index = std::pair<long, long>(rpos, i);                  
+                    auto qbase = r->qbase(i);
                     align_info[index].emplace(r->query_id(), PosInfo(qbase));
-                                         
-                    if (align_info[index].size() == ins_read_num_threshold || (ins_read_num_threshold == 0 && align_info[index].size() == 1)) {
-                       pos_queue.emplace_back(rpos, i);    
-                    }
+                    
+                
+                    //if (i <= MAX_INS) {
+		    //	if (align_info[index].size() == 1) pos_queue.emplace_back(rpos, i);
+		   // } else {
+		    if (align_info[index].size() == ins_read_num_threshold) pos_queue.emplace_back(rpos, i);
+		    //} 
 
                     switch(qbase) {
                         case Bases::A:

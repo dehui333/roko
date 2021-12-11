@@ -7,7 +7,7 @@ from ignite.engine import Events, Engine
 from ignite.metrics import RunningAverage, Accuracy, Loss
 from ignite.handlers import EarlyStopping, ModelCheckpoint
 from tqdm import tqdm
-from rnn_model import *
+from rnn_model2 import *
 
 BATCH_SIZE = 128
 EPOCHS = 100
@@ -45,7 +45,6 @@ def train(train_path, out, val_path=None, mem=False, workers=0, batch_size=128, 
         x2 = x2.to(device)
         model.train()
         model.zero_grad()
-
         output = model(x, x2).transpose(1, 2)
         loss = F.cross_entropy(output, y)
 

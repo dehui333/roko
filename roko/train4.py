@@ -8,6 +8,7 @@ from ignite.metrics import RunningAverage, Accuracy, Loss
 from ignite.handlers import EarlyStopping, ModelCheckpoint
 from tqdm import tqdm
 from rnn_model import *
+from labels import *
 
 BATCH_SIZE = 128
 EPOCHS = 100
@@ -45,10 +46,18 @@ def train(train_path, out, val_path=None, mem=False, workers=0, batch_size=128, 
         x2 = x2.to(device)
         model.train()
         model.zero_grad()
-
-        output = model(x, x2).transpose(1, 2)
-        loss = F.cross_entropy(output, y)
-
+        #output = model(x, x2).transpose(1, 2)
+        gap_symbol = encoding[GAP]
+        output = model(x, x2).transpose(0, 1)
+        output = F.log_softmax(output, -1)
+        indices = torch.arange(y.shape[1]).expand(y.shape).to(device)
+        sorted_indices = torch.sort(torch.where(y==gap_symbol, indices+y.shape[1], indices))
+        sorted_indices = torch.where(sorted_indices[0]<y.shape[1], sorted_indices[0], sorted_indices[0]-y.shape[1])
+        sorted_y = torch.gather(y, 1, sorted_indices)
+        y_lens = torch.sum((sorted_y != gap_symbol).type(sorted_y.dtype) ,-1)
+        output_lens = torch.full((output.shape[1], ), output.shape[0], dtype=torch.int32).to(device)
+        #loss = F.cross_entropy(output, iy)
+        loss = F.ctc_loss(output, sorted_y, output_lens, y_lens, blank=gap_symbol, reduction='mean', zero_infinity=True)
         loss.backward()
         optim.step()
 
@@ -61,15 +70,25 @@ def train(train_path, out, val_path=None, mem=False, workers=0, batch_size=128, 
             x, y, x2 = x.type(torch.LongTensor), y.to(device), x2.type(torch.FloatTensor)
             x = x.to(device)
             x2 = x2.to(device)
-            out = model(x, x2).transpose(1, 2)
-            return out, y
+            #out = model(x, x2).transpose(1, 2)
+            gap_symbol = encoding[GAP]
+            output = model(x, x2).transpose(0, 1)
+            output = F.log_softmax(output, -1)
+            indices = torch.arange(y.shape[1]).expand(y.shape).to(device)
+            sorted_indices = torch.sort(torch.where(y==gap_symbol, indices+y.shape[1], indices))
+            sorted_indices = torch.where(sorted_indices[0]<y.shape[1], sorted_indices[0], sorted_indices[0]-y.shape[1])
+            sorted_y = torch.gather(y, 1, sorted_indices)
+            y_lens = torch.sum((sorted_y != gap_symbol).type(sorted_y.dtype) ,-1)
+            output_lens = torch.full((output.shape[1], ), output.shape[0], dtype=torch.int32).to(device)
+
+            return output, sorted_y, output_lens, y_lens, gap_symbol, 'mean', True
 
     trainer = Engine(step)
     evaluator = Engine(eval)
 
     RunningAverage(output_transform=lambda x: x).attach(trainer, 'train_loss')
     Accuracy().attach(evaluator, 'val_acc')
-    Loss(F.cross_entropy).attach(evaluator, 'val_loss')
+    Loss(F.ctc_loss).attach(evaluator, 'val_loss')
 
     if val_path:
         # EarlyStopping

@@ -4,22 +4,27 @@ import os
 import h5py
 import numpy as np
 from abc import abstractmethod
+import re
 
-
-def get_filenames(path):
+def get_filenames(path, regex=None):
     if os.path.isdir(path):
         filenames = []
+        if regex is None:
+            regex = ".*"
+        match = re.compile(regex)
         for f in os.listdir(path):
             if f.endswith('.hdf5'):
-                filenames.append(os.path.join(path, f))
-
+                filenames.append(f)                
+        filenames = [x for x in filenames if match.search(x) != None]
+        filenames = [os.path.join(path, x) for x in filenames]
+        print(filenames) 
         return filenames
 
     return [path]
 
 class StorageDataset(Dataset):
-    def __init__(self, path, transform=None, read_contigs=False):
-        self.filenames = get_filenames(path)
+    def __init__(self, path, transform=None, read_contigs=False, regex=None):
+        self.filenames = get_filenames(path, regex)
         fds = [h5py.File(f, 'r', libver='latest', swmr=True) for f in self.filenames]
 
         # For torch workers
@@ -81,8 +86,8 @@ class TrainDataset(StorageDataset):
 
 
 class InMemoryTrainDataset(Dataset):
-    def __init__(self, path, transform=None):
-        self.filenames = get_filenames(path)
+    def __init__(self, path, transform=None, regex=None):
+        self.filenames = get_filenames(path, regex)
 
         self.X = []
         self.Y = []
