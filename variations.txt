@@ -1,0 +1,12 @@
+----features-----
+setup2.py, generate2.cpp - aligns ins segments, requires edlib
+
+
+
+----model----------
+train.py, rnn_models.py, inference.py - has aux matrix but not using
+train2.py, rnn_models2.py, inference2.py - using aux matrix
+train3.py rnn_model3.py, inference3.py - use aux matrix, normalize
+train4.py - does not use aux matrix, use ctc loss
+
+
