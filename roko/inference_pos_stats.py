@@ -71,7 +71,7 @@ class InferenceDataset(Dataset):
 
         contig = group.attrs['contig']
         X = group['examples'][p]
-        X2 = group['stats'][]
+        X2 = group['stats'][p]
         position = group['positions'][p]
 
         sample = (contig, position, X, X2)
