@@ -6,7 +6,7 @@ from collections import defaultdict, Counter
 import argparse
 from torch.utils.data import Dataset, DataLoader
 import itertools
-from rnn_model import *
+from rnn_model_pos_stats import *
 import numpy as np
 
 GPU_NUM = 1
@@ -19,9 +19,9 @@ torch.manual_seed(42)
 
 class ToTensor:
     def __call__(self, sample):
-        contig, position, x = sample
+        contig, position, x, x2 = sample
 
-        return contig, position, torch.from_numpy(x)
+        return contig, position, torch.from_numpy(x), torch.from_numpy(x2)
 
 
 class InferenceDataset(Dataset):
@@ -71,9 +71,10 @@ class InferenceDataset(Dataset):
 
         contig = group.attrs['contig']
         X = group['examples'][p]
+        X2 = group['stats'][]
         position = group['positions'][p]
 
-        sample = (contig, position, X)
+        sample = (contig, position, X, X2)
         if self.transform:
             sample = self.transform(sample)
 
@@ -104,38 +105,15 @@ def infer(data, model_path, out, workers=0, batch_size=128):
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=workers)
 
     info = []
-    def f(x):
-        try:
-            d =  decoding[x]
-        except KeyError:
-            d = decoding[x-6]
-        return d
-
-    v_f = np.vectorize(f)
 
     print('Inference started')
     with torch.no_grad():
         for i, batch in enumerate(dataloader):
-            c, pos, x = batch
-            ls = []
-            for i in range(len(c)):
-                if c[i] == 'Utg3228' and pos[i][0][0] <= 748195 and pos[i][89][0] >= 748195:
-                    ls.append(i)
-            x = x.type(torch.LongTensor)
-            x = x.to(device)
-            logits = model(x)
+            c, pos, x, x2 = batch
+            x, x2 = x.type(torch.LongTensor).to(device), x2.type(torch.LongTensor).to(device)
+            logits = model(x, x2)
             Y = torch.argmax(logits, dim=2).long()
             Y = Y.cpu().numpy()
-            x_cpu = x.to('cpu')
-            
-            for i in ls:
-                print(i)
-                print(pos[i])
-                for row in v_f(x_cpu[i]):
-                    print(row)
-                print('----------------')
-                print(v_f(Y[i]))
-                print('----------------------')
 
             for cb, pb, yb in zip(c, pos, Y):
                 for p, y in zip(pb, yb):
@@ -148,14 +126,12 @@ def infer(data, model_path, out, workers=0, batch_size=128):
                 print(f'{i + 1} batches processed')
 
     contigs = dataset.contigs
-    for i in range(4):
-        print(i)
-        print(result['Utg3228'][(748195, i)])
     for contig in result:
         values = result[contig]
 
         pos_sorted = sorted(values)
         pos_sorted = list(itertools.dropwhile(lambda x: x[1] != 0, pos_sorted))
+
         first = pos_sorted[0][0]
         contig_data = contigs[contig]
         seq = contig_data[0][:first]

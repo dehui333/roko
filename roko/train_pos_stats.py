@@ -7,7 +7,7 @@ from ignite.engine import Events, Engine
 from ignite.metrics import RunningAverage, Accuracy, Loss
 from ignite.handlers import EarlyStopping, ModelCheckpoint
 from tqdm import tqdm
-from rnn_model import *
+from rnn_model_pos_stats import *
 BATCH_SIZE = 128
 EPOCHS = 100
 LR = 1e-4

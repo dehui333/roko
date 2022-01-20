@@ -282,6 +282,29 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
             map.emplace(id, PosInfo(Bases::GAP));	  
             
         }
+        for (auto& pair: map) {
+            auto b = pair.second.base;
+            switch(b) {
+                case Bases::A:
+                    stats_info[index].n_A++;
+                    break;
+                case Bases::C:
+                    stats_info[index].n_C++;
+                    break;
+                case Bases::G:
+                    stats_info[index].n_G++;
+                    break;
+                case Bases::T:
+                    stats_info[index].n_T++;
+                    break;
+                case Bases::GAP:
+                    stats_info[index].n_del++;
+                    break;
+                default:
+                    std::cout << "SHOULD NOT GET HERE" << std::endl;        
+            }   
+
+        }
 
         align_info[index] = map;
         labels_info[index] = ins_positions_labels[0][i];
@@ -302,6 +325,29 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
         }
         for (auto& id: no_ins_reads) {
             star_positions[i].emplace(id, PosInfo(Bases::GAP));	  
+        }
+        for (auto& pair: star_positions[i]) {
+            auto b = pair.second.base;
+            switch(b) {
+                case Bases::A:
+                    stats_info[index].n_A++;
+                    break;
+                case Bases::C:
+                    stats_info[index].n_C++;
+                    break;
+                case Bases::G:
+                    stats_info[index].n_G++;
+                    break;
+                case Bases::T:
+                    stats_info[index].n_T++;
+                    break;
+                case Bases::GAP:
+                    stats_info[index].n_del++;
+                    break;
+                default:
+                    std::cout << "SHOULD NOT GET HERE" << std::endl;        
+            }   
+
         }
 
         align_info[index] = star_positions[i];
@@ -325,6 +371,29 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
             }
             for (auto& id: no_ins_reads) {
                 map.emplace(id, PosInfo(Bases::GAP));	  
+            }
+            for (auto& pair: map) {
+                auto b = pair.second.base;
+                switch(b) {
+                    case Bases::A:
+                        stats_info[index].n_A++;
+                        break;
+                    case Bases::C:
+                        stats_info[index].n_C++;
+                        break;
+                    case Bases::G:
+                        stats_info[index].n_G++;
+                        break;
+                    case Bases::T:
+                        stats_info[index].n_T++;
+                        break;
+                    case Bases::GAP:
+                        stats_info[index].n_del++;
+                        break;
+                    default:
+                        std::cout << "SHOULD NOT GET HERE" << std::endl;        
+                 }   
+
             }
 
             align_info[index] = map;
@@ -371,10 +440,12 @@ void FeatureGenerator::align_ins_center_star(long base_index, std::vector<segmen
 std::unique_ptr<Data> FeatureGenerator::generate_features() {
 
     npy_intp dims[2];
+    npy_intp dims2[2];
     npy_intp labels_dim[1];
     labels_dim[0] = dimensions[1];
     for (int i = 0; i < 2; i++) {
         dims[i] = dimensions[i];
+        dims2[i] = dimensions2[i];
     }
  
     auto data = std::unique_ptr<Data>(new Data());
@@ -480,7 +551,25 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                 long count = 1;    
                 for (auto& c: s.sequence) {		
                     std::pair<long, long> index(rpos, count);
-                    align_info[index].emplace(s.index, PosInfo(char_to_base(c)));
+                    auto b = char_to_base(c);
+                    align_info[index].emplace(s.index, PosInfo(b));
+                switch(b) {
+                    case Bases::A:
+                        stats_info[index].n_A++;
+                    break;
+                    case Bases::C:
+                        stats_info[index].n_C++;
+                    break;
+                    case Bases::G:
+                        stats_info[index].n_G++;
+                    break;
+                    case Bases::T:
+                        stats_info[index].n_T++;
+                    break;
+                    default:
+                        std::cout << "SHOULD NOT GET HERE" << std::endl;        
+                }   
+
                     if (align_info[index].size() == threshold_num) {
                         pos_queue.emplace_back(rpos, count);	
                     }
@@ -492,6 +581,8 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                 if (s.index == -1) continue;
                 for (long i = s.len + 1; i <= max_indel; i++) {
                     std::pair<long, long> index(rpos, i);
+                    stats_info[index].n_del++; 
+
                     align_info[index].emplace(s.index, PosInfo(Bases::GAP));		   
 
                 }	
@@ -501,6 +592,8 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             for (auto& id: no_ins_reads) {
                 for (long i = 1; i <= max_indel; i++) {
                     std::pair<long, long> index(rpos, i);
+                    stats_info[index].n_del++;  
+
                     align_info[index].emplace(id, PosInfo(Bases::GAP));		   
 
                 }	
@@ -531,7 +624,9 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             int valid_size = valid.size();
 
             auto X = PyArray_SimpleNew(2, dims, NPY_UINT8);
+            auto X2 = PyArray_SimpleNew(2, dims2, NPY_UINT8);
             auto Y = PyArray_SimpleNew(1, labels_dim, NPY_UINT8);
+            
             uint8_t* value_ptr;
 
             // First handle assembly (REF_ROWS)
@@ -545,6 +640,23 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                     value_ptr = (uint8_t*) PyArray_GETPTR2(X, r, s);
                     *value_ptr = value; // Forward strand - no +6
                 }
+            }
+            //fill up X2 
+            for (auto s = 0; s < dimensions[1]; s++) {
+                auto curr = it + s;
+                auto pos_stats = stats_info[*curr];
+
+                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 0, s);
+                *value_ptr = pos_stats.n_del;
+                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 1, s);
+                *value_ptr = pos_stats.n_A;
+                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 2, s);
+                *value_ptr = pos_stats.n_C;
+                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 3, s);
+                *value_ptr = pos_stats.n_G;
+                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 4, s);
+                *value_ptr = pos_stats.n_T;
+                
             }
 
             for (int r = REF_ROWS; r < dimensions[0]; r++) {
@@ -589,6 +701,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             }
 
             data->X.push_back(X);
+            data->X2.push_back(X2);
             data->Y.push_back(Y);
             data->positions.emplace_back(pos_queue.begin(), pos_queue.begin() + dimensions[1]);
             for (auto it = pos_queue.begin(), end = pos_queue.begin() + WINDOW; it != end; ++it) {

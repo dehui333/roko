@@ -16,7 +16,8 @@ extern "C" {
 #include "models.h"
 
 
-constexpr int dimensions[] = {200, 90};
+constexpr int dimensions[] = {50, 90}; 
+constexpr int dimensions2[] = {5, 90}; // dimensions for second matrix
 constexpr int WINDOW = dimensions[1] / 3;
 constexpr int REF_ROWS = 0;
 constexpr float threshold_prop = 0; // need this proportion of reads to support a base(ACTG) in the position to include it
@@ -27,6 +28,7 @@ struct Data{
     std::vector<std::vector<std::pair<long, long>>> positions;
     std::vector<PyObject*> X;
     std::vector<PyObject*> Y;
+    std::vector<PyObject*> X2;
 };
 
 struct PosInfo{

@@ -19,9 +19,9 @@ torch.manual_seed(42)
 
 class ToTensor:
     def __call__(self, sample):
-        contig, position, x = sample
+        contig, position, x, x2 = sample
 
-        return contig, position, torch.from_numpy(x)
+        return contig, position, torch.from_numpy(x), torch.from_numpy(x2)
 
 
 class InferenceDataset(Dataset):
@@ -71,9 +71,10 @@ class InferenceDataset(Dataset):
 
         contig = group.attrs['contig']
         X = group['examples'][p]
+        X2 = group['stats'][]
         position = group['positions'][p]
 
-        sample = (contig, position, X)
+        sample = (contig, position, X, X2)
         if self.transform:
             sample = self.transform(sample)
 
@@ -108,10 +109,9 @@ def infer(data, model_path, out, workers=0, batch_size=128):
     print('Inference started')
     with torch.no_grad():
         for i, batch in enumerate(dataloader):
-            c, pos, x = batch
-            x = x.type(torch.LongTensor)
-            x = x.to(device)
-            logits = model(x)
+            c, pos, x, x2 = batch
+            x, x2 = x.type(torch.LongTensor).to(device), x2.type(torch.LongTensor).to(device)
+            logits = model(x, x2)
             Y = torch.argmax(logits, dim=2).long()
             Y = Y.cpu().numpy()
 
