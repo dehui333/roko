@@ -177,7 +177,7 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
     std::vector<std::unordered_map<uint32_t, PosInfo>> ins_positions[star.len+1]; //stores bases aligned to gaps inserted into the original seq of star
     uint8_t star_positions_labels[star.len];
     for (int i = 0; i < star.len; i ++) {
-        star_positions_labels[i] = 4;
+        star_positions_labels[i] = ENCODED_BASES[Bases::GAP];
     }
     std::vector<uint8_t> ins_positions_labels[star.len+1];
     int total_ins_pos = 0;
@@ -211,7 +211,7 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
                         base_at_pos = char_to_base(char_at_pos);
                         if (ins_positions[ref_pos+1].size() < ins_index + 1) { // if not enough maps to record bases in that position
                             ins_positions[ref_pos+1].push_back(std::unordered_map<uint32_t, PosInfo>{});
-                            ins_positions_labels[ref_pos+1].push_back(4);
+                            ins_positions_labels[ref_pos+1].push_back(ENCODED_BASES[Bases::GAP]);
                             total_ins_pos++;
                         }
                         if (s.index == -1) {
@@ -278,8 +278,7 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
                 map.emplace(id, PosInfo(Bases::GAP));	
             }	  
         }
-        for (auto& id: no_ins_reads) {
-            
+        for (auto& id: no_ins_reads) { 
             map.emplace(id, PosInfo(Bases::GAP));	  
             
         }
@@ -381,7 +380,6 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
     auto data = std::unique_ptr<Data>(new Data());
     
     while (pileup_iter->has_next()) {
-
         auto column = pileup_iter->next();
         long rpos = column->position;
         if (rpos < pileup_iter->start()) continue;
@@ -390,7 +388,6 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
         if (threshold_num == 0) threshold_num = 1;	
         std::vector<segment> ins_segments;
         std::vector<uint32_t> no_ins_reads;
-        //int longest_index = 0;
         bool col_has_enough_ins = false;
         unsigned int total_ins_len = 0;
         unsigned int max_indel = 0;
@@ -411,9 +408,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
         }
         if (s.size() > 0) {
             ins_segments.emplace_back(s, s.size(), -1);\
-        } else {
-            no_ins_reads.push_back(-1);
-        }
+        } 
 
         while(column->has_next()) {
             auto r = column->next();
@@ -429,11 +424,28 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             if (r->is_del()) {
                 // DELETION
                 align_info[index].emplace(r->query_id(), PosInfo(Bases::GAP));
+                stats_info[index].n_del++;
             } else {
                 // POSITION
 
                 auto qbase = r->qbase(0);
                 align_info[index].emplace(r->query_id(), PosInfo(qbase));
+                switch(qbase) {
+                    case Bases::A:
+                        stats_info[index].n_A++;
+                    break;
+                    case Bases::C:
+                        stats_info[index].n_C++;
+                    break;
+                    case Bases::G:
+                        stats_info[index].n_G++;
+                    break;
+                    case Bases::T:
+                        stats_info[index].n_T++;
+                    break;
+                    default:
+                        std::cout << "SHOULD NOT GET HERE" << std::endl;        
+                }   
                 // INSERTION
                 if (r-> indel() > 0) {
                     std::string s;
@@ -463,8 +475,8 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             col_has_enough_ins = false;
 
         } else {
-
             for (auto& s: ins_segments) {
+                if (s.index == -1) continue;
                 long count = 1;    
                 for (auto& c: s.sequence) {		
                     std::pair<long, long> index(rpos, count);
@@ -477,6 +489,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             }
 
             for (auto& s: ins_segments) {
+                if (s.index == -1) continue;
                 for (long i = s.len + 1; i <= max_indel; i++) {
                     std::pair<long, long> index(rpos, i);
                     align_info[index].emplace(s.index, PosInfo(Bases::GAP));		   
@@ -491,7 +504,11 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                     align_info[index].emplace(id, PosInfo(Bases::GAP));		   
 
                 }	
-            }		    
+            }	
+            for (long i = 1; i <= max_indel; i++) {
+                std::pair<long, long> index(rpos, i);
+                labels_info[index] = ENCODED_BASES[Bases::GAP];
+            }
 
         }
         //BUILD FEATURE MATRIX
@@ -501,9 +518,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
 
             for (auto s = 0; s < dimensions[1]; s++) {    
                 auto curr = it + s;
-
-
-
+                
                 for (auto& align : align_info[*curr]) {
                     if (align.second.base != Bases::UNKNOWN) {
                         valid_aligns.emplace(align.first);
@@ -512,6 +527,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
 
             }
             std::vector<uint32_t> valid(valid_aligns.begin(), valid_aligns.end());
+           
             int valid_size = valid.size();
 
             auto X = PyArray_SimpleNew(2, dims, NPY_UINT8);
@@ -575,12 +591,10 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             data->X.push_back(X);
             data->Y.push_back(Y);
             data->positions.emplace_back(pos_queue.begin(), pos_queue.begin() + dimensions[1]);
-
             for (auto it = pos_queue.begin(), end = pos_queue.begin() + WINDOW; it != end; ++it) {
                 align_info.erase(*it);
             }
             pos_queue.erase(pos_queue.begin(), pos_queue.begin() + WINDOW);
-
         }
     }
 

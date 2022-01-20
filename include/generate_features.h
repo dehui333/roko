@@ -35,6 +35,19 @@ struct PosInfo{
     PosInfo(Bases b) : base(b) {};
 };
 
+struct PosStats {
+
+    uint8_t n_del = 0;
+    uint8_t n_A = 0;
+    uint8_t n_C = 0;
+    uint8_t n_G = 0;
+    uint8_t n_T = 0;
+    
+    //PosStats() : avg_mq(0), n_mq(0), avg_pq(0), n_pq(0) {};
+    
+    
+};
+
 struct EnumClassHash
 {
     template <typename T>
@@ -74,7 +87,7 @@ class FeatureGenerator {
         std::unordered_map<std::pair<long, long>, uint8_t, pair_hash> labels_info;
         std::unordered_map<uint32_t, std::pair<long, long>> align_bounds;
         std::unordered_map<uint32_t, bool> strand;
-
+        std::unordered_map<std::pair<long, long>, PosStats, pair_hash> stats_info;
         struct segment {
             std::string sequence;
             int len;
