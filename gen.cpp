@@ -5,7 +5,7 @@
 #define PY_ARRAY_UNIQUE_SYMBOL gen_ARRAY_API
 #include "numpy/arrayobject.h"
 
-#include "generate.h"
+#include "generate_features.h"
 
 // Module method definitions
 static PyObject* generate_features_cpp(PyObject *self, PyObject *args) {
@@ -13,12 +13,11 @@ static PyObject* generate_features_cpp(PyObject *self, PyObject *args) {
 
     char *filename, *ref, *region;
     PyObject* dict = NULL;
-    int use_dict = -1;
+    int inference_mode = -1;
 
-    if (!PyArg_ParseTuple(args, "sssOi", &filename, &ref, &region, &dict, &use_dict)) return NULL;
-    auto map = convert_py_labels_dict(dict);	
-    auto result = generate_features(filename, ref, region, map, use_dict);
-
+    if (!PyArg_ParseTuple(args, "sssOi", &filename, &ref, &region, &dict, &inference_mode)) return NULL;
+    FeatureGenerator feature_generator {filename, ref, region, dict, static_cast<bool>(inference_mode)};
+    auto result = feature_generator.generate_features();
     PyObject* return_tuple = PyTuple_New(3);
     PyObject* pos_list = PyList_New(result->positions.size());
     PyObject* X_list = PyList_New(result->X.size());
