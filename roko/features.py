@@ -140,7 +140,6 @@ def main():
                 c, p, x, y, x2 = result
                 data.store(c, p, x, y, x2)
                 finished += 1
-                print(f'finished num{finished}')
 
                 if finished % 10 == 0:
                     print('Writing to disk started')

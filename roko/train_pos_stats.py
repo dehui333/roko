@@ -38,7 +38,7 @@ def train(train_path, out, val_path=None, mem=False, workers=0, batch_size=128, 
 
     def step(engine, batch):
         x, y, x2 = batch
-        x, y, x2 = x.type(torch.LongTensor).to(device), y.type(torch.LongTensor).to(device), x2.type(torch.LongTensor).to(device)
+        x, y, x2 = x.type(torch.LongTensor).to(device), y.type(torch.LongTensor).to(device), x2.type(torch.FloatTensor).to(device)
 
         model.train()
         model.zero_grad()
@@ -55,7 +55,7 @@ def train(train_path, out, val_path=None, mem=False, workers=0, batch_size=128, 
         model.eval()
         with torch.no_grad():
             x, y, x2 = batch
-            x, y, x2 = x.type(torch.LongTensor).to(device), y.type(torch.LongTensor).to(device), x2.type(torch.LongTensor).to(device)
+            x, y, x2 = x.type(torch.LongTensor).to(device), y.type(torch.LongTensor).to(device), x2.type(torch.FloatTensor).to(device)
             out = model(x, x2).transpose(1, 2)
             return out, y
 
