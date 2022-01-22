@@ -110,7 +110,7 @@ def infer(data, model_path, out, workers=0, batch_size=128):
     with torch.no_grad():
         for i, batch in enumerate(dataloader):
             c, pos, x, x2 = batch
-            x, x2 = x.type(torch.LongTensor).to(device), x2.type(torch.LongTensor).to(device)
+            x, x2 = x.type(torch.LongTensor).to(device), x2.type(torch.FloatTensor).to(device)
             logits = model(x, x2)
             Y = torch.argmax(logits, dim=2).long()
             Y = Y.cpu().numpy()
