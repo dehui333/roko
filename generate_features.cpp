@@ -16,7 +16,6 @@
 
 #include "edlib.h"
 #include "generate_features.h"
-
 // For reverse strand add +6
 std::unordered_map<Bases, uint8_t, EnumClassHash> ENCODED_BASES = {
     {Bases::A, 0},
@@ -534,8 +533,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                 }
 
            }
-
-
+          
         }
         float avg_ins_len = total_ins_len/ (float) column->count();
         if (avg_ins_len   >= align_len_threshold && ins_segments.size() > 0) col_has_enough_ins = true;
@@ -553,22 +551,22 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                     std::pair<long, long> index(rpos, count);
                     auto b = char_to_base(c);
                     align_info[index].emplace(s.index, PosInfo(b));
-                switch(b) {
-                    case Bases::A:
-                        stats_info[index].n_A++;
-                    break;
-                    case Bases::C:
-                        stats_info[index].n_C++;
-                    break;
-                    case Bases::G:
-                        stats_info[index].n_G++;
-                    break;
-                    case Bases::T:
-                        stats_info[index].n_T++;
-                    break;
-                    default:
-                        std::cout << "SHOULD NOT GET HERE" << std::endl;        
-                }   
+                    switch(b) {
+                        case Bases::A:
+                            stats_info[index].n_A++;
+                            break;
+                        case Bases::C:
+                            stats_info[index].n_C++;
+                            break;
+                        case Bases::G:
+                            stats_info[index].n_G++;
+                            break;
+                        case Bases::T:
+                            stats_info[index].n_T++;
+                            break;
+                        default:
+                            std::cout << "SHOULD NOT GET HERE" << std::endl;        
+                     }   
 
                     if (align_info[index].size() == threshold_num) {
                         pos_queue.emplace_back(rpos, count);	
@@ -624,10 +622,11 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             int valid_size = valid.size();
 
             auto X = PyArray_SimpleNew(2, dims, NPY_UINT8);
-            auto X2 = PyArray_SimpleNew(2, dims2, NPY_UINT8);
+            auto X2 = PyArray_SimpleNew(2, dims2, NPY_UINT16);
             auto Y = PyArray_SimpleNew(1, labels_dim, NPY_UINT8);
             
             uint8_t* value_ptr;
+            uint16_t *value_ptr_16;
 
             // First handle assembly (REF_ROWS)
             for (auto s = 0; s < dimensions[1]; s++) {
@@ -645,17 +644,16 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             for (auto s = 0; s < dimensions[1]; s++) {
                 auto curr = it + s;
                 auto pos_stats = stats_info[*curr];
-
-                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 0, s);
-                *value_ptr = pos_stats.n_del;
-                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 1, s);
-                *value_ptr = pos_stats.n_A;
-                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 2, s);
-                *value_ptr = pos_stats.n_C;
-                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 3, s);
-                *value_ptr = pos_stats.n_G;
-                value_ptr = (uint8_t*) PyArray_GETPTR2(X2, 4, s);
-                *value_ptr = pos_stats.n_T;
+                value_ptr_16 = (uint16_t*) PyArray_GETPTR2(X2, 0, s);
+                *value_ptr_16 = pos_stats.n_del;
+                value_ptr_16 = (uint16_t*) PyArray_GETPTR2(X2, 1, s);
+                *value_ptr_16 = pos_stats.n_A;
+                value_ptr_16 = (uint16_t*) PyArray_GETPTR2(X2, 2, s);
+                *value_ptr_16 = pos_stats.n_C;
+                value_ptr_16 = (uint16_t*) PyArray_GETPTR2(X2, 3, s);
+                *value_ptr_16 = pos_stats.n_G;
+                value_ptr_16 = (uint16_t*) PyArray_GETPTR2(X2, 4, s);
+                *value_ptr_16 = pos_stats.n_T;
                 
             }
 

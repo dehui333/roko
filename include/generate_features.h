@@ -39,11 +39,11 @@ struct PosInfo{
 
 struct PosStats {
 
-    uint8_t n_del = 0;
-    uint8_t n_A = 0;
-    uint8_t n_C = 0;
-    uint8_t n_G = 0;
-    uint8_t n_T = 0;
+    uint16_t n_del = 0;
+    uint16_t n_A = 0;
+    uint16_t n_C = 0;
+    uint16_t n_G = 0;
+    uint16_t n_T = 0;
     
     //PosStats() : avg_mq(0), n_mq(0), avg_pq(0), n_pq(0) {};
     
