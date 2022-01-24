@@ -131,4 +131,5 @@ class InMemoryTrainDataset(Dataset):
 class TrainToTensor:
     def __call__(self, sample):
         X, Y, X2 = sample
+        X2 = X2.astype(np.int16)
         return torch.from_numpy(X), torch.from_numpy(Y), torch.from_numpy(X2)

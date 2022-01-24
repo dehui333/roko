@@ -56,9 +56,6 @@ class RNN(nn.Module):
         x = self.do2(x)
 
         x = x.reshape(-1, 90, IN_SIZE)
-        #x2 = torch.transpose(x2, 1, 2)
-        #x2 = F.normalize(x2, 1, 1)
-        #x = torch.cat([x, x2], 2)
         x, _ = self.gru(x)
 
         return self.fc4(x)

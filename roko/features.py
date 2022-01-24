@@ -81,6 +81,8 @@ def generate_train(args):
                 labels.append(Y)
                 pos_stats.append(X2)
 
+               
+                
     print(f'Finished generating examples for {region.name}:{region.start+1}-{region.end}.')
     return region.name, positions, examples, labels, pos_stats
 
@@ -95,7 +97,7 @@ def generate_infer(args):
         positions.append(P)
         examples.append(X)
         pos_stats.append(X2)
-     
+                    
     print(f'Finished generating examples for {region.name}:{region.start+1}-{region.end}.')
     return region.name, positions, examples, None, pos_stats
 

@@ -45,7 +45,6 @@ def train(train_path, out, val_path=None, mem=False, workers=0, batch_size=128, 
 
         output = model(x, x2).transpose(1, 2)
         loss = F.cross_entropy(output, y)
-
         loss.backward()
         optim.step()
 
