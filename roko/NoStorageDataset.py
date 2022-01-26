@@ -1,4 +1,5 @@
 from Bio import SeqIO
+from features import generate_regions, is_in_region 
 import gen
 from labels import *
 import math
@@ -50,25 +51,6 @@ def generate_args_for_feature_gen(list_of_string_tuples, inference):
                 results.append(a)
 
     return results, contigs
-
-def generate_regions(ref, ref_name, window=100_000, overlap=300):
-    length = len(ref)
-    i = 0
-
-    while i < length:
-        end = i + window
-        yield Region(ref_name, i, min(end, length))
-
-        if end >= length:
-            break
-        else:
-            i = end - overlap
-
-def is_in_region(pos, aligns):
-    for a in aligns:
-        if a.start <= pos < a.end:
-            return True
-    return False
 
 def worker_init_fn(worker_id):
     worker_info = torch.utils.data.get_worker_info()

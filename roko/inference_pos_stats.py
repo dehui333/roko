@@ -20,7 +20,7 @@ torch.manual_seed(42)
 class ToTensor:
     def __call__(self, sample):
         contig, position, x, x2 = sample
-
+        x2 = x2.astype(np.int16)
         return contig, position, torch.from_numpy(x), torch.from_numpy(x2)
 
 
