@@ -80,6 +80,28 @@ void FeatureGenerator::convert_py_labels_dict(PyObject *dict) {
     }
 }
 
+void FeatureGenerator::increment_base_count(std::pair<long, long>& index, Bases b) {
+
+    switch(b) {
+        case Bases::A:
+            stats_info[index].n_A++;
+            break;
+        case Bases::C:
+            stats_info[index].n_C++;
+            break;
+        case Bases::G:
+            stats_info[index].n_G++;
+            break;
+        case Bases::T:
+            stats_info[index].n_T++;
+            break;
+        case Bases::GAP:
+            stats_info[index].n_GAP++;
+            break;
+        default:
+            std::cout << "SHOULD NOT GET HERE" << std::endl;        
+    }   
+}
 
 Bases FeatureGenerator::char_to_base(char c) {
     switch (c) {
@@ -163,25 +185,37 @@ uint8_t FeatureGenerator::char_to_forward_int(char c) {
 }
 
 
-void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& segments, int star_index, 
+void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& segments, int star_pos_index, 
         std::vector<uint32_t>& no_ins_reads) {
-    std::vector<uint32_t> seq_indices(segments.size());
-    segment star = segments[star_index];
-    std::unordered_map<uint32_t, PosInfo> star_positions[star.sequence.size()]; //stores bases aligned to original positions on the star   
-    //stores bases aligned to gaps inserted into the original seq of star
+
+    // The indices of all non label sequences
+    std::vector<uint32_t> seq_indices; 
+    seq_indices.reserve(segments.size());
+
+    // Align all to this
+    segment star = segments[star_pos_index];
+
+    // stores bases aligned to original positions on the star   
+    std::unordered_map<uint32_t, PosInfo> star_positions[star.sequence.size()];     
+    // stores bases aligned to gaps inserted into the original seq of star
     std::vector<std::unordered_map<uint32_t, PosInfo>> ins_positions[star.sequence.size()+1]; 
-    uint8_t star_positions_labels[star.sequence.size()];
+
+    // stores labels aligned to the positions on the star sequence. By default all gaps
+    uint8_t star_positions_labels[star.sequence.size()];  
     for (unsigned int i = 0; i < star.sequence.size(); i ++) {
         star_positions_labels[i] = ENCODED_BASES[Bases::GAP];
     }
+    
+    // stores the labels aligned to the positions where the star has gaps after aligning
     std::vector<uint8_t> ins_positions_labels[star.sequence.size()+1];
+
     int total_ins_pos = 0;
     for (auto s: segments) {
-        //std::cout << s.index << " " << s.sequence << std::endl;
-        if (s.index != -1) seq_indices.push_back(s.index);
+        if (s.index != LABEL_SEQ_ID) seq_indices.push_back(s.index);
         if (s.index != star.index) {
             EdlibAlignResult result = edlibAlign(s.sequence.c_str(), s.sequence.size(), star.sequence.c_str(),
                     star.sequence.size(), edlibNewAlignConfig(-1, EDLIB_MODE_NW, EDLIB_TASK_PATH, NULL, 0));
+
             int ref_pos = -1; // pointing to before next to read ref base
             int query_pos = -1; // pointing to before next to read query base 
             unsigned int ins_index = 0; // index of next insertion, 0-based
@@ -194,7 +228,7 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
                         char_at_pos = s.sequence[++query_pos];
                         base_at_pos = char_to_base(char_at_pos);
                         ref_pos++;
-                        if (s.index == -1) {
+                        if (s.index == LABEL_SEQ_ID) {
                             star_positions_labels[ref_pos] = char_to_forward_int(char_at_pos);
                         } else {
                             star_positions[ref_pos].emplace(s.index, PosInfo(base_at_pos));
@@ -209,7 +243,7 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
                             ins_positions_labels[ref_pos+1].push_back(ENCODED_BASES[Bases::GAP]);
                             total_ins_pos++;
                         }
-                        if (s.index == -1) {
+                        if (s.index == LABEL_SEQ_ID) {
                             ins_positions_labels[ref_pos+1][ins_index] = char_to_forward_int(char_at_pos);
                         } else {
                             ins_positions[ref_pos+1][ins_index].emplace(s.index, PosInfo(base_at_pos));
@@ -227,7 +261,7 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
                         char_at_pos = s.sequence[++query_pos];
                         base_at_pos = char_to_base(char_at_pos);
                         ref_pos++;
-                        if (s.index == -1) {
+                        if (s.index == LABEL_SEQ_ID) {
                             star_positions_labels[ref_pos] = char_to_forward_int(char_at_pos);
                         } else {
                             star_positions[ref_pos].emplace(s.index, PosInfo(base_at_pos));
@@ -247,7 +281,7 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
             for (unsigned int i = 0; i < s.sequence.size(); i++) {
                 const char char_at_pos = s.sequence[i];
                 Bases base_at_pos = char_to_base(char_at_pos);               
-                if (s.index == -1) {
+                if (s.index == LABEL_SEQ_ID) {
                     star_positions_labels[i] = char_to_forward_int(char_at_pos);
                 } else {
                     star_positions[i].emplace(s.index, PosInfo(base_at_pos));
@@ -279,25 +313,7 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
         }
         for (auto& pair: map) {
             auto b = pair.second.base;
-            switch(b) {
-                case Bases::A:
-                    stats_info[index].n_A++;
-                    break;
-                case Bases::C:
-                    stats_info[index].n_C++;
-                    break;
-                case Bases::G:
-                    stats_info[index].n_G++;
-                    break;
-                case Bases::T:
-                    stats_info[index].n_T++;
-                    break;
-                case Bases::GAP:
-                    stats_info[index].n_GAP++;
-                    break;
-                default:
-                    std::cout << "SHOULD NOT GET HERE" << std::endl;        
-            }   
+            increment_base_count(index, b);  
 
         }
 
@@ -312,7 +328,6 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
         pos_queue.emplace_back(base_index, count);
         count++;
         
-
         for (auto& id: seq_indices) {
             if (star_positions[i].find(id) == star_positions[i].end()) {
                 star_positions[i].emplace(id, PosInfo(Bases::GAP));	
@@ -323,25 +338,7 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
         }
         for (auto& pair: star_positions[i]) {
             auto b = pair.second.base;
-            switch(b) {
-                case Bases::A:
-                    stats_info[index].n_A++;
-                    break;
-                case Bases::C:
-                    stats_info[index].n_C++;
-                    break;
-                case Bases::G:
-                    stats_info[index].n_G++;
-                    break;
-                case Bases::T:
-                    stats_info[index].n_T++;
-                    break;
-                case Bases::GAP:
-                    stats_info[index].n_GAP++;
-                    break;
-                default:
-                    std::cout << "SHOULD NOT GET HERE" << std::endl;        
-            }   
+            increment_base_count(index, b);  
 
         }
 
@@ -351,14 +348,10 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
         for (unsigned int j = 0; j < ins_positions[i+1].size(); j++) {
             auto& map = ins_positions[i+1][j];
             auto index = std::pair<long, long>(base_index, count);
-
            
             pos_queue.emplace_back(base_index, count);
             count++;
             
-
-
-
             for (auto& id: seq_indices) {
                 if (map.find(id) == map.end()) {
                     map.emplace(id, PosInfo(Bases::GAP));	
@@ -369,25 +362,7 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
             }
             for (auto& pair: map) {
                 auto b = pair.second.base;
-                switch(b) {
-                    case Bases::A:
-                        stats_info[index].n_A++;
-                        break;
-                    case Bases::C:
-                        stats_info[index].n_C++;
-                        break;
-                    case Bases::G:
-                        stats_info[index].n_G++;
-                        break;
-                    case Bases::T:
-                        stats_info[index].n_T++;
-                        break;
-                    case Bases::GAP:
-                        stats_info[index].n_GAP++;
-                        break;
-                    default:
-                        std::cout << "SHOULD NOT GET HERE" << std::endl;        
-                 }   
+                increment_base_count(index, b);  
 
             }
 
@@ -468,7 +443,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             }
         }
         if (s.size() > 0) {
-            ins_segments.emplace_back(s, -1);\
+            ins_segments.emplace_back(s, LABEL_SEQ_ID);\
         } 
 
         while(column->has_next()) {
@@ -485,28 +460,13 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             if (r->is_del()) {
                 // DELETION
                 align_info[index].emplace(r->query_id(), PosInfo(Bases::GAP));
-                stats_info[index].n_GAP++;
+                increment_base_count(index, Bases::GAP);
             } else {
                 // POSITION
 
                 auto qbase = r->qbase(0);
                 align_info[index].emplace(r->query_id(), PosInfo(qbase));
-                switch(qbase) {
-                    case Bases::A:
-                        stats_info[index].n_A++;
-                    break;
-                    case Bases::C:
-                        stats_info[index].n_C++;
-                    break;
-                    case Bases::G:
-                        stats_info[index].n_G++;
-                    break;
-                    case Bases::T:
-                        stats_info[index].n_T++;
-                    break;
-                    default:
-                        std::cout << "SHOULD NOT GET HERE" << std::endl;        
-                }   
+                increment_base_count(index, qbase); 
                 // INSERTION
                 if (r-> indel() > 0) {
                     std::string s;

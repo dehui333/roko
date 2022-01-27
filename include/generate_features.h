@@ -21,6 +21,7 @@ constexpr int dimensions2[] = {5, 90}; // dimensions for second matrix
 constexpr int WINDOW = dimensions[1] / 3;
 constexpr int REF_ROWS = 0;
 
+constexpr int LABEL_SEQ_ID = -1;
 
 struct Data{
     std::vector<std::vector<std::pair<long, long>>> positions;
@@ -111,6 +112,8 @@ class FeatureGenerator {
         int find_center(std::vector<segment>& segments);
 
         void convert_py_labels_dict(PyObject *dict);
+
+        void increment_base_count(std::pair<long, long>& index, Bases b);
 
     public:
         FeatureGenerator(const char* filename, const char* ref, const char* region, PyObject* dict);   
