@@ -90,9 +90,8 @@ class FeatureGenerator {
         std::unordered_map<std::pair<long, long>, PosStats, pair_hash> stats_info;
         struct segment {
             std::string sequence;
-            int len;
             int index;
-            segment(std::string seq, int l, int id) : sequence(seq), len(l), index(id) {};
+            segment(std::string seq, int id) : sequence(seq), index(id) {};
         };
 
         Bases char_to_base(char c);

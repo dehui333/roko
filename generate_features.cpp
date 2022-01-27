@@ -167,20 +167,21 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
         std::vector<uint32_t>& no_ins_reads) {
     std::vector<uint32_t> seq_indices(segments.size());
     segment star = segments[star_index];
-    std::unordered_map<uint32_t, PosInfo> star_positions[star.len]; //stores bases aligned to original positions on the star
-    std::vector<std::unordered_map<uint32_t, PosInfo>> ins_positions[star.len+1]; //stores bases aligned to gaps inserted into the original seq of star
-    uint8_t star_positions_labels[star.len];
-    for (int i = 0; i < star.len; i ++) {
+    std::unordered_map<uint32_t, PosInfo> star_positions[star.sequence.size()]; //stores bases aligned to original positions on the star   
+    //stores bases aligned to gaps inserted into the original seq of star
+    std::vector<std::unordered_map<uint32_t, PosInfo>> ins_positions[star.sequence.size()+1]; 
+    uint8_t star_positions_labels[star.sequence.size()];
+    for (unsigned int i = 0; i < star.sequence.size(); i ++) {
         star_positions_labels[i] = ENCODED_BASES[Bases::GAP];
     }
-    std::vector<uint8_t> ins_positions_labels[star.len+1];
+    std::vector<uint8_t> ins_positions_labels[star.sequence.size()+1];
     int total_ins_pos = 0;
     for (auto s: segments) {
         //std::cout << s.index << " " << s.sequence << std::endl;
         if (s.index != -1) seq_indices.push_back(s.index);
         if (s.index != star.index) {
-            EdlibAlignResult result = edlibAlign(s.sequence.c_str(), s.len, star.sequence.c_str(),
-                    star.len, edlibNewAlignConfig(-1, EDLIB_MODE_NW, EDLIB_TASK_PATH, NULL, 0));
+            EdlibAlignResult result = edlibAlign(s.sequence.c_str(), s.sequence.size(), star.sequence.c_str(),
+                    star.sequence.size(), edlibNewAlignConfig(-1, EDLIB_MODE_NW, EDLIB_TASK_PATH, NULL, 0));
             int ref_pos = -1; // pointing to before next to read ref base
             int query_pos = -1; // pointing to before next to read query base 
             unsigned int ins_index = 0; // index of next insertion, 0-based
@@ -243,7 +244,7 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
 
         } else {
             // record bases on the star    
-            for (int i = 0; i < s.len; i++) {
+            for (unsigned int i = 0; i < s.sequence.size(); i++) {
                 const char char_at_pos = s.sequence[i];
                 Bases base_at_pos = char_to_base(char_at_pos);               
                 if (s.index == -1) {
@@ -304,7 +305,7 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
         labels_info[index] = ins_positions_labels[0][i];
         
     }
-    for (int i = 0; i < star.len; i++) {
+    for (unsigned int i = 0; i < star.sequence.size(); i++) {
         auto index = std::pair<long, long>(base_index, count);
 
         
@@ -401,8 +402,8 @@ int FeatureGenerator::find_center(std::vector<segment>& segments) {
     for (unsigned int i = 0; i < segments.size(); i++) {
         for (unsigned int j = i + 1; j < segments.size(); j++) {
 
-            EdlibAlignResult result = edlibAlign(segments[i].sequence.c_str(), segments[i].len, segments[j].sequence.c_str(),
-                    segments[j].len, edlibNewAlignConfig(-1, EDLIB_MODE_NW, EDLIB_TASK_DISTANCE, NULL, 0));
+            EdlibAlignResult result = edlibAlign(segments[i].sequence.c_str(), segments[i].sequence.size(), segments[j].sequence.c_str(),
+                    segments[j].sequence.size(), edlibNewAlignConfig(-1, EDLIB_MODE_NW, EDLIB_TASK_DISTANCE, NULL, 0));
             dists[i] += result.editDistance;
             dists[j] += result.editDistance;
             edlibFreeAlignResult(result);
@@ -467,7 +468,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             }
         }
         if (s.size() > 0) {
-            ins_segments.emplace_back(s, s.size(), -1);\
+            ins_segments.emplace_back(s, -1);\
         } 
 
         while(column->has_next()) {
@@ -514,7 +515,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                         qbase = r->qbase(i);
                         s.push_back(base_to_char(qbase));                 
                     }
-                    ins_segments.emplace_back(s, r->indel(), static_cast<int>(r->query_id()));
+                    ins_segments.emplace_back(s, static_cast<int>(r->query_id()));
                 } else {
                     no_ins_reads.push_back(r->query_id());
 
