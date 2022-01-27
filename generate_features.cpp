@@ -97,7 +97,7 @@ Bases FeatureGenerator::char_to_base(char c) {
             std::cout << "Unknown base!" << std::endl;
             return Bases::UNKNOWN;
         default:
-            std::cout << "Non N unknown!" << std::endl;
+            std::cout << "Invalid argument to char_to_base!" << std::endl;
             return Bases::UNKNOWN;
     }
 }
@@ -121,7 +121,7 @@ char FeatureGenerator::base_to_char(Bases b) {
     }
 }
 
-char FeatureGenerator::int_to_char(uint8_t i) {
+char FeatureGenerator::forward_int_to_char(uint8_t i) {
     switch (i) {
         case 0:
             return 'A';
@@ -133,30 +133,16 @@ char FeatureGenerator::int_to_char(uint8_t i) {
             return 'T';
         case 4:
             return '*';
+        case 5:
+            return 'N';
         default:
+            std::cout << "Invalid argument for forward_int_to_char!" << std::endl; 
             return 'N';
     }
 }
 
-Bases FeatureGenerator::int_to_base(uint8_t i) {
 
-    switch (i) {
-        case 0:
-            return Bases::A;
-        case 1:
-            return Bases::C;
-        case 2:
-            return Bases::G;
-        case 3:
-            return Bases::T;
-        case 4:
-            return Bases::GAP;
-        default:
-            return Bases::UNKNOWN;
-    }
-}
-
-uint8_t FeatureGenerator::char_to_int(char c) {
+uint8_t FeatureGenerator::char_to_forward_int(char c) {
     switch (c) {
         case 'A':
             return 0;
@@ -168,7 +154,10 @@ uint8_t FeatureGenerator::char_to_int(char c) {
             return 3;
         case '*':
             return 4;
+        case 'N':
+            return 5;
         default:
+            std::cout << "Invalid argument for char_to_forward_int!" << std::endl;
             return 5;
     }
 }
@@ -205,7 +194,7 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
                         base_at_pos = char_to_base(char_at_pos);
                         ref_pos++;
                         if (s.index == -1) {
-                            star_positions_labels[ref_pos] = char_to_int(char_at_pos);
+                            star_positions_labels[ref_pos] = char_to_forward_int(char_at_pos);
                         } else {
                             star_positions[ref_pos].emplace(s.index, PosInfo(base_at_pos));
                         }
@@ -220,7 +209,7 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
                             total_ins_pos++;
                         }
                         if (s.index == -1) {
-                            ins_positions_labels[ref_pos+1][ins_index] = char_to_int(char_at_pos);
+                            ins_positions_labels[ref_pos+1][ins_index] = char_to_forward_int(char_at_pos);
                         } else {
                             ins_positions[ref_pos+1][ins_index].emplace(s.index, PosInfo(base_at_pos));
                         }
@@ -238,7 +227,7 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
                         base_at_pos = char_to_base(char_at_pos);
                         ref_pos++;
                         if (s.index == -1) {
-                            star_positions_labels[ref_pos] = char_to_int(char_at_pos);
+                            star_positions_labels[ref_pos] = char_to_forward_int(char_at_pos);
                         } else {
                             star_positions[ref_pos].emplace(s.index, PosInfo(base_at_pos));
                         }
@@ -258,7 +247,7 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
                 const char char_at_pos = s.sequence[i];
                 Bases base_at_pos = char_to_base(char_at_pos);               
                 if (s.index == -1) {
-                    star_positions_labels[i] = char_to_int(char_at_pos);
+                    star_positions_labels[i] = char_to_forward_int(char_at_pos);
                 } else {
                     star_positions[i].emplace(s.index, PosInfo(base_at_pos));
                 }
@@ -444,9 +433,9 @@ void FeatureGenerator::align_ins_center_star(long base_index, std::vector<segmen
 
 std::unique_ptr<Data> FeatureGenerator::generate_features() {
 
-    npy_intp dims[2];
-    npy_intp dims2[2];
-    npy_intp labels_dim[1];
+    npy_intp dims[2]; // dimensions of X1
+    npy_intp dims2[2]; // dimensions of X2
+    npy_intp labels_dim[1]; // dimensions of labels
     labels_dim[0] = dimensions[1];
     for (int i = 0; i < 2; i++) {
         dims[i] = dimensions[i];
@@ -460,7 +449,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
         long rpos = column->position;
         if (rpos < pileup_iter->start()) continue;
         if (rpos >= pileup_iter->end()) break;
-        std::vector<segment> ins_segments;
+        std::vector<segment> ins_segments; 
         std::vector<uint32_t> no_ins_reads;
         std::string s;
         if (has_labels) {
@@ -470,7 +459,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             index = std::make_pair(rpos, ins_count);
             auto found = labels.find(index);
             while (found != labels.end()) {
-                char c = int_to_char(labels[index]);
+                char c = forward_int_to_char(labels[index]);
                 s.push_back(c);
                 ins_count++;
                 index = std::make_pair(rpos, ins_count);

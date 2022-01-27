@@ -97,9 +97,8 @@ class FeatureGenerator {
 
         Bases char_to_base(char c);
         char base_to_char(Bases b);
-        char int_to_char(uint8_t i);
-        Bases int_to_base(uint8_t i);
-        uint8_t char_to_int(char c);
+        char forward_int_to_char(uint8_t i);
+        uint8_t char_to_forward_int(char c);
             
         void align_center_star(long base_index, std::vector<segment>& segments, int star_index,
             std::vector<uint32_t>& no_ins_reads);
