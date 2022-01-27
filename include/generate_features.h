@@ -39,7 +39,7 @@ struct PosInfo{
 
 struct PosStats {
 
-    uint16_t n_del = 0;
+    uint16_t n_GAP = 0;
     uint16_t n_A = 0;
     uint16_t n_C = 0;
     uint16_t n_G = 0;

@@ -297,7 +297,7 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
                     stats_info[index].n_T++;
                     break;
                 case Bases::GAP:
-                    stats_info[index].n_del++;
+                    stats_info[index].n_GAP++;
                     break;
                 default:
                     std::cout << "SHOULD NOT GET HERE" << std::endl;        
@@ -341,7 +341,7 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
                     stats_info[index].n_T++;
                     break;
                 case Bases::GAP:
-                    stats_info[index].n_del++;
+                    stats_info[index].n_GAP++;
                     break;
                 default:
                     std::cout << "SHOULD NOT GET HERE" << std::endl;        
@@ -387,7 +387,7 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
                         stats_info[index].n_T++;
                         break;
                     case Bases::GAP:
-                        stats_info[index].n_del++;
+                        stats_info[index].n_GAP++;
                         break;
                     default:
                         std::cout << "SHOULD NOT GET HERE" << std::endl;        
@@ -494,7 +494,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             if (r->is_del()) {
                 // DELETION
                 align_info[index].emplace(r->query_id(), PosInfo(Bases::GAP));
-                stats_info[index].n_del++;
+                stats_info[index].n_GAP++;
             } else {
                 // POSITION
 
@@ -579,7 +579,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                 if (s.index == -1) continue;
                 for (long i = s.len + 1; i <= max_indel; i++) {
                     std::pair<long, long> index(rpos, i);
-                    stats_info[index].n_del++; 
+                    stats_info[index].n_GAP++; 
 
                     align_info[index].emplace(s.index, PosInfo(Bases::GAP));		   
 
@@ -590,7 +590,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             for (auto& id: no_ins_reads) {
                 for (long i = 1; i <= max_indel; i++) {
                     std::pair<long, long> index(rpos, i);
-                    stats_info[index].n_del++;  
+                    stats_info[index].n_GAP++;  
 
                     align_info[index].emplace(id, PosInfo(Bases::GAP));		   
 
@@ -645,7 +645,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                 auto curr = it + s;
                 auto pos_stats = stats_info[*curr];
                 value_ptr_16 = (uint16_t*) PyArray_GETPTR2(X2, 0, s);
-                *value_ptr_16 = pos_stats.n_del;
+                *value_ptr_16 = pos_stats.n_GAP;
                 value_ptr_16 = (uint16_t*) PyArray_GETPTR2(X2, 1, s);
                 *value_ptr_16 = pos_stats.n_A;
                 value_ptr_16 = (uint16_t*) PyArray_GETPTR2(X2, 2, s);
