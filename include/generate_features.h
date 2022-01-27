@@ -20,7 +20,6 @@ constexpr int dimensions[] = {50, 90};
 constexpr int dimensions2[] = {5, 90}; // dimensions for second matrix
 constexpr int WINDOW = dimensions[1] / 3;
 constexpr int REF_ROWS = 0;
-constexpr unsigned int align_len_threshold = 0; // need avg ins len >= this at the position to align it 
 
 
 struct Data{

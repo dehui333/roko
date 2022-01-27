@@ -456,9 +456,6 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
         if (rpos >= pileup_iter->end()) break;
         std::vector<segment> ins_segments;
         std::vector<uint32_t> no_ins_reads;
-        bool col_has_enough_ins = false;
-        unsigned int total_ins_len = 0;
-        unsigned int max_indel = 0;
         std::string s;
         if (inference_mode) {
             std::pair<long, long> index {rpos, 0};
@@ -522,8 +519,6 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                         qbase = r->qbase(i);
                         s.push_back(base_to_char(qbase));                 
                     }
-                    if (static_cast<unsigned int>(r->indel()) > max_indel) max_indel = r->indel();
-                    total_ins_len += r->indel();     
                     ins_segments.emplace_back(s, r->indel(), static_cast<int>(r->query_id()));
                 } else {
                     no_ins_reads.push_back(r->query_id());
@@ -533,73 +528,12 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
            }
           
         }
-        float avg_ins_len = total_ins_len/ (float) column->count();
-        if (avg_ins_len   >= align_len_threshold && ins_segments.size() > 0) col_has_enough_ins = true;
 
-        if (col_has_enough_ins) {
+        if (ins_segments.size() > 0) {
 
             align_ins_center_star(rpos, ins_segments, no_ins_reads);
-            col_has_enough_ins = false;
 
-        } else {
-            for (auto& s: ins_segments) {
-                if (s.index == -1) continue;
-                long count = 1;    
-                for (auto& c: s.sequence) {		
-                    std::pair<long, long> index(rpos, count);
-                    auto b = char_to_base(c);
-                    align_info[index].emplace(s.index, PosInfo(b));
-                    switch(b) {
-                        case Bases::A:
-                            stats_info[index].n_A++;
-                            break;
-                        case Bases::C:
-                            stats_info[index].n_C++;
-                            break;
-                        case Bases::G:
-                            stats_info[index].n_G++;
-                            break;
-                        case Bases::T:
-                            stats_info[index].n_T++;
-                            break;
-                        default:
-                            std::cout << "SHOULD NOT GET HERE" << std::endl;        
-                     }   
-
-                   
-                    pos_queue.emplace_back(rpos, count);	
-                    
-                    count++;
-                }	
-            }
-
-            for (auto& s: ins_segments) {
-                if (s.index == -1) continue;
-                for (long i = s.len + 1; i <= max_indel; i++) {
-                    std::pair<long, long> index(rpos, i);
-                    stats_info[index].n_GAP++; 
-
-                    align_info[index].emplace(s.index, PosInfo(Bases::GAP));		   
-
-                }	
-
-            }	    
-
-            for (auto& id: no_ins_reads) {
-                for (long i = 1; i <= max_indel; i++) {
-                    std::pair<long, long> index(rpos, i);
-                    stats_info[index].n_GAP++;  
-
-                    align_info[index].emplace(id, PosInfo(Bases::GAP));		   
-
-                }	
-            }	
-            for (long i = 1; i <= max_indel; i++) {
-                std::pair<long, long> index(rpos, i);
-                labels_info[index] = ENCODED_BASES[Bases::GAP];
-            }
-
-        }
+        } 
         //BUILD FEATURE MATRIX
         while (pos_queue.size() >= dimensions[1]) {
             std::set<uint32_t> valid_aligns;
