@@ -20,7 +20,6 @@ constexpr int dimensions[] = {50, 90};
 constexpr int dimensions2[] = {5, 90}; // dimensions for second matrix
 constexpr int WINDOW = dimensions[1] / 3;
 constexpr int REF_ROWS = 0;
-constexpr float threshold_prop = 0; // need this proportion of reads to support a base(ACTG) in the position to include it
 constexpr unsigned int align_len_threshold = 0; // need avg ins len >= this at the position to align it 
 
 
@@ -104,13 +103,13 @@ class FeatureGenerator {
         uint8_t char_to_int(char c);
             
         void align_center_star(long base_index, std::vector<segment>& segments, int star_index,
-            unsigned int& threshold_num, std::vector<uint32_t>& no_ins_reads);
+            std::vector<uint32_t>& no_ins_reads);
 
         void align_ins_longest_star(long base_index, std::vector<segment>& ins_segments, int longest_index, 
-            unsigned int& threshold_num, std::vector<uint32_t>& no_ins_reads);
+            std::vector<uint32_t>& no_ins_reads);
 
         void align_ins_center_star(long base_index, std::vector<segment>& ins_segments,
-            unsigned int& threshold_num, std::vector<uint32_t>& no_ins_reads);
+            std::vector<uint32_t>& no_ins_reads);
 
         int find_center(std::vector<segment>& segments);
 

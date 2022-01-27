@@ -169,7 +169,7 @@ uint8_t FeatureGenerator::char_to_int(char c) {
 
 
 void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& segments, int star_index, 
-        unsigned int& threshold_num, std::vector<uint32_t>& no_ins_reads) {
+        std::vector<uint32_t>& no_ins_reads) {
     std::vector<uint32_t> seq_indices(segments.size());
     segment star = segments[star_index];
     std::unordered_map<uint32_t, PosInfo> star_positions[star.len]; //stores bases aligned to original positions on the star
@@ -267,10 +267,10 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
     for (unsigned int i = 0; i < ins_positions[0].size(); i++) {
         auto& map = ins_positions[0][i];
         auto index = std::pair<long, long>(base_index, count);
-        if (map.size() >= threshold_num) {
-            pos_queue.emplace_back(base_index, count);
-            count++;
-        }
+        
+        pos_queue.emplace_back(base_index, count);
+        count++;
+        
 
         for (auto& id: seq_indices) {
             if (map.find(id) == map.end()) {
@@ -312,10 +312,10 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
     for (int i = 0; i < star.len; i++) {
         auto index = std::pair<long, long>(base_index, count);
 
-        if (star_positions[i].size() >= threshold_num) {
-            pos_queue.emplace_back(base_index, count);
-            count++;
-        }
+        
+        pos_queue.emplace_back(base_index, count);
+        count++;
+        
 
         for (auto& id: seq_indices) {
             if (star_positions[i].find(id) == star_positions[i].end()) {
@@ -356,10 +356,10 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
             auto& map = ins_positions[i+1][j];
             auto index = std::pair<long, long>(base_index, count);
 
-            if (map.size() >= threshold_num) {
-                pos_queue.emplace_back(base_index, count);
-                count++;
-            }
+           
+            pos_queue.emplace_back(base_index, count);
+            count++;
+            
 
 
 
@@ -424,15 +424,15 @@ int FeatureGenerator::find_center(std::vector<segment>& segments) {
 }
 
 void FeatureGenerator::align_ins_longest_star(long base_index, std::vector<segment>& ins_segments, int longest_index,
-        unsigned int& threshold_num, std::vector<uint32_t>& no_ins_reads) {
-    align_center_star(base_index, ins_segments, longest_index, threshold_num, no_ins_reads);
+        std::vector<uint32_t>& no_ins_reads) {
+    align_center_star(base_index, ins_segments, longest_index, no_ins_reads);
 
 }
 
 void FeatureGenerator::align_ins_center_star(long base_index, std::vector<segment>& ins_segments,
-        unsigned int& threshold_num, std::vector<uint32_t>& no_ins_reads) {
+        std::vector<uint32_t>& no_ins_reads) {
     int center_index = find_center(ins_segments);
-    align_center_star(base_index, ins_segments, center_index, threshold_num, no_ins_reads);
+    align_center_star(base_index, ins_segments, center_index, no_ins_reads);
 
 }
 
@@ -454,8 +454,6 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
         long rpos = column->position;
         if (rpos < pileup_iter->start()) continue;
         if (rpos >= pileup_iter->end()) break;
-        unsigned int threshold_num = threshold_prop * column->count();
-        if (threshold_num == 0) threshold_num = 1;	
         std::vector<segment> ins_segments;
         std::vector<uint32_t> no_ins_reads;
         bool col_has_enough_ins = false;
@@ -540,7 +538,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
 
         if (col_has_enough_ins) {
 
-            align_ins_center_star(rpos, ins_segments, threshold_num, no_ins_reads);
+            align_ins_center_star(rpos, ins_segments, no_ins_reads);
             col_has_enough_ins = false;
 
         } else {
@@ -568,9 +566,9 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                             std::cout << "SHOULD NOT GET HERE" << std::endl;        
                      }   
 
-                    if (align_info[index].size() == threshold_num) {
-                        pos_queue.emplace_back(rpos, count);	
-                    }
+                   
+                    pos_queue.emplace_back(rpos, count);	
+                    
                     count++;
                 }	
             }
