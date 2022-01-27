@@ -14,7 +14,6 @@ NoStorageDataset takes 2 arguments to initialize:
 If inference mode, the third item in the tuples is not required.
 '''
 
-EMPTY_DICT = dict()
 ENCODED_UNKNOWN = encoding[UNKNOWN]   
 
 def get_string_tuples_from_file(path):
@@ -77,7 +76,7 @@ class NoStorageDataset(torch.utils.data.IterableDataset):
             bam_X, bam_Y, ref, region = self.list_of_args[i]
             if self.infer:  
                 region_string = f'{region.name}:{region.start+1}-{region.end}'
-                result = gen.generate_features(bam_X, ref, region_string, EMPTY_DICT, 0)
+                result = gen.generate_features(bam_X, ref, region_string, None)
                 for P, X, Y, X2 in zip(*result):
                     P = [list(p) for p in P]
                     yield region.name, torch.tensor(P), X, X2.astype(np.int16)        
@@ -105,7 +104,7 @@ class NoStorageDataset(torch.utils.data.IterableDataset):
 
                     pos_sorted = sorted(list(pos_labels.keys()))
                     region_string = f'{region.name}:{pos_sorted[0][0]+1}-{pos_sorted[-1][0]}'
-                    result = gen.generate_features(bam_X, str(ref), region_string, pos_labels, 1)
+                    result = gen.generate_features(bam_X, str(ref), region_string, pos_labels)
 
                     for P, X, Y, X2 in zip(*result):
                         to_yield = True

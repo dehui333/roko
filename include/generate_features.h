@@ -78,7 +78,7 @@ class FeatureGenerator {
         std::unique_ptr<BAMFile> bam;
         std::unique_ptr<PositionIterator> pileup_iter;
         const char* draft;
-        const bool inference_mode;
+        bool has_labels;
         
         // store progress
         std::unordered_map<std::pair<long, long>, uint8_t, pair_hash> labels;
@@ -115,7 +115,7 @@ class FeatureGenerator {
         void convert_py_labels_dict(PyObject *dict);
 
     public:
-        FeatureGenerator(const char* filename, const char* ref, const char* region, PyObject* dict, bool inference_mode);   
+        FeatureGenerator(const char* filename, const char* ref, const char* region, PyObject* dict);   
 
         std::unique_ptr<Data> generate_features();
 };

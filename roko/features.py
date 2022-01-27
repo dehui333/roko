@@ -62,7 +62,7 @@ def generate_train(args):
         pos_sorted = sorted(list(pos_labels.keys()))
         region_string = f'{region.name}:{pos_sorted[0][0]+1}-{pos_sorted[-1][0]}'
 
-        result = gen.generate_features(bam_X, str(ref), region_string, pos_labels, 1)
+        result = gen.generate_features(bam_X, str(ref), region_string, pos_labels)
 
         for P, X, Y, X2 in zip(*result):
           
@@ -90,7 +90,7 @@ def generate_train(args):
 def generate_infer(args):
     bam_X, ref, region = args
     region_string = f'{region.name}:{region.start+1}-{region.end}'
-    result = gen.generate_features(bam_X, ref, region_string, dict(), 0)
+    result = gen.generate_features(bam_X, ref, region_string, None)
     positions, examples, pos_stats = [], [], []
     
     for P, X, Y, X2 in zip(*result):

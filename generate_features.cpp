@@ -26,11 +26,17 @@ std::unordered_map<Bases, uint8_t, EnumClassHash> ENCODED_BASES = {
     {Bases::UNKNOWN, 5}
 };
 
-FeatureGenerator::FeatureGenerator(const char* filename, const char* ref, const char* region, PyObject* dict, bool inference_mode): draft(ref), inference_mode(inference_mode) {
+FeatureGenerator::FeatureGenerator(const char* filename, const char* ref, const char* region, PyObject* dict): draft(ref) {
     
     bam = readBAM(filename);
     pileup_iter = bam->pileup(region);
-    convert_py_labels_dict(dict);
+    if (dict == Py_None) { 
+        has_labels = false;
+    } else {
+        convert_py_labels_dict(dict);
+        has_labels = true;
+    }
+    
 }
 
 void FeatureGenerator::convert_py_labels_dict(PyObject *dict) {
@@ -457,7 +463,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
         std::vector<segment> ins_segments;
         std::vector<uint32_t> no_ins_reads;
         std::string s;
-        if (inference_mode) {
+        if (has_labels) {
             std::pair<long, long> index {rpos, 0};
             labels_info[index] = labels[index];
             long ins_count = 1;
