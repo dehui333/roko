@@ -37,13 +37,13 @@ libexecdir   = ${exec_prefix}/libexec
 datarootdir  = ${prefix}/share
 mandir       = ${datarootdir}/man
 
-CC     = /home/lindehui/miniconda3/envs/py37/bin/x86_64-conda-linux-gnu-cc
-RANLIB = /home/lindehui/miniconda3/envs/py37/bin/x86_64-conda-linux-gnu-ranlib
+CC     = /home/lindehui/miniconda3/envs/test_env/bin/x86_64-conda-linux-gnu-cc
+RANLIB = /home/lindehui/miniconda3/envs/test_env/bin/x86_64-conda-linux-gnu-ranlib
 
-CPPFLAGS = -DNDEBUG -D_FORTIFY_SOURCE=2 -O2 -isystem /home/lindehui/miniconda3/envs/py37/include
+CPPFLAGS = -DNDEBUG -D_FORTIFY_SOURCE=2 -O2 -isystem /home/lindehui/miniconda3/envs/test_env/include
 CFLAGS   =  -Wall -fpic
-LDFLAGS  = -Wl,-O2 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now -Wl,--disable-new-dtags -Wl,--gc-sections -Wl,-rpath,/home/lindehui/miniconda3/envs/py37/lib -Wl,-rpath-link,/home/lindehui/miniconda3/envs/py37/lib -L/home/lindehui/miniconda3/envs/py37/lib
-LIBS     = -ldeflate -lz -lm 
+LDFLAGS  = -Wl,-O2 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now -Wl,--disable-new-dtags -Wl,--gc-sections -Wl,-rpath,/home/lindehui/miniconda3/envs/test_env/lib -Wl,-rpath-link,/home/lindehui/miniconda3/envs/test_env/lib -L/home/lindehui/miniconda3/envs/test_env/lib
+LIBS     = -lz -lm 
 
 PLATFORM   = default
 PLUGIN_EXT = .so

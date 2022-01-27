@@ -1,7 +1,6 @@
 
 # Created by https://www.gitignore.io/api/c,c++,linux,python,pycharm+all,visualstudiocode
 # Edit at https://www.gitignore.io/?templates=c,c++,linux,python,pycharm+all,visualstudiocode
-
 Dependencies/
 roko_venv/
 ### C ###
