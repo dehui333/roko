@@ -197,6 +197,7 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
 
     // stores bases aligned to original positions on the star   
     std::unordered_map<uint32_t, PosInfo> star_positions[star.sequence.size()];     
+
     // stores bases aligned to gaps inserted into the original seq of star
     std::vector<std::unordered_map<uint32_t, PosInfo>> ins_positions[star.sequence.size()+1]; 
 
@@ -294,6 +295,7 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
     }
 
     long count = 1;
+    // correspond to positions before the first position of star before aligning
     for (unsigned int i = 0; i < ins_positions[0].size(); i++) {
         auto& map = ins_positions[0][i];
         auto index = std::pair<long, long>(base_index, count);
@@ -321,6 +323,8 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
         labels_info[index] = ins_positions_labels[0][i];
         
     }
+
+    // correspond to positions on star before aligning, and insertions after them(the inner loop)
     for (unsigned int i = 0; i < star.sequence.size(); i++) {
         auto index = std::pair<long, long>(base_index, count);
 
@@ -427,6 +431,8 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
         if (rpos >= pileup_iter->end()) break;
         std::vector<segment> ins_segments; 
         std::vector<uint32_t> no_ins_reads;
+        
+        // Put the unaligned labels sequence into s
         std::string s;
         if (has_labels) {
             std::pair<long, long> index {rpos, 0};
@@ -442,8 +448,10 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                 found = labels.find(index);
             }
         }
+
+
         if (s.size() > 0) {
-            ins_segments.emplace_back(s, LABEL_SEQ_ID);\
+            ins_segments.emplace_back(std::move(s), LABEL_SEQ_ID);\
         } 
 
         while(column->has_next()) {
@@ -463,7 +471,6 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                 increment_base_count(index, Bases::GAP);
             } else {
                 // POSITION
-
                 auto qbase = r->qbase(0);
                 align_info[index].emplace(r->query_id(), PosInfo(qbase));
                 increment_base_count(index, qbase); 
@@ -475,12 +482,11 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                         qbase = r->qbase(i);
                         s.push_back(base_to_char(qbase));                 
                     }
-                    ins_segments.emplace_back(s, static_cast<int>(r->query_id()));
+                    ins_segments.emplace_back(std::move(s), static_cast<int>(r->query_id()));
                 } else {
                     no_ins_reads.push_back(r->query_id());
 
                 }
-
            }
           
         }
@@ -490,6 +496,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             align_ins_center_star(rpos, ins_segments, no_ins_reads);
 
         } 
+
         //BUILD FEATURE MATRIX
         while (pos_queue.size() >= dimensions[1]) {
             std::set<uint32_t> valid_aligns;
