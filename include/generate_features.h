@@ -17,11 +17,11 @@ extern "C" {
 
 
 constexpr int dimensions[] = {50, 90}; 
-constexpr int dimensions2[] = {5, 90}; // dimensions for second matrix
+constexpr int dimensions2[] = {7, 90}; // dimensions for second matrix
 constexpr int WINDOW = dimensions[1] / 3;
 constexpr int REF_ROWS = 0;
 
-constexpr int LABEL_SEQ_ID = -1;
+constexpr uint64_t LABEL_SEQ_ID = -1;
 
 struct Data{
     std::vector<std::vector<std::pair<long, long>>> positions;
@@ -32,7 +32,6 @@ struct Data{
 
 struct PosInfo{
     Bases base;
-
     PosInfo(Bases b) : base(b) {};
 };
 
@@ -43,6 +42,10 @@ struct PosStats {
     uint16_t n_C = 0;
     uint16_t n_G = 0;
     uint16_t n_T = 0;
+    uint16_t n_bq = 0;
+    uint16_t n_mq = 0;
+    float avg_bq = 0;
+    float avg_mq = 0;
     
     //PosStats() : avg_mq(0), n_mq(0), avg_pq(0), n_pq(0) {};
     
@@ -91,7 +94,10 @@ class FeatureGenerator {
         std::unordered_map<std::pair<long, long>, PosStats, pair_hash> stats_info;
         struct segment {
             std::string sequence;
-            int index;
+            uint64_t index;
+            uint8_t mq;
+            std::vector<uint8_t> bqs; // the 1st is the bq of the base before ins segment, the last is after
+            segment(std::string seq, int id, uint8_t mq, std::vector<uint8_t> bqs) : sequence(seq), index(id), mq(mq), bqs(bqs) {};
             segment(std::string seq, int id) : sequence(seq), index(id) {};
         };
 
@@ -101,19 +107,23 @@ class FeatureGenerator {
         uint8_t char_to_forward_int(char c);
             
         void align_center_star(long base_index, std::vector<segment>& segments, int star_index,
-            std::vector<uint32_t>& no_ins_reads);
+            std::vector<segment>& no_ins_reads);
 
         void align_ins_longest_star(long base_index, std::vector<segment>& ins_segments, int longest_index, 
-            std::vector<uint32_t>& no_ins_reads);
+            std::vector<segment>& no_ins_reads);
 
         void align_ins_center_star(long base_index, std::vector<segment>& ins_segments,
-            std::vector<uint32_t>& no_ins_reads);
+            std::vector<segment>& no_ins_reads);
 
         int find_center(std::vector<segment>& segments);
 
         void convert_py_labels_dict(PyObject *dict);
 
         void increment_base_count(std::pair<long, long>& index, Bases b);
+
+        void add_bq_sample(std::pair<long, long>& index, float bq);
+
+        void add_mq_sample(std::pair<long, long>& index, uint8_t mq);
 
     public:
         FeatureGenerator(const char* filename, const char* ref, const char* region, PyObject* dict);   
