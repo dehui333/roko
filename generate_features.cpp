@@ -69,9 +69,9 @@ void FeatureGenerator::convert_py_labels_dict(PyObject *dict) {
             PyErr_SetString(PyExc_TypeError, "A value of dict is not of long type!");
             labels.clear();
         }
-        long pair_item0_c = PyLong_AsLong(pair_item0);
-        long pair_item1_c = PyLong_AsLong(pair_item1);
-        uint8_t value_c = PyLong_AsLong(value);
+        pos_index_t pair_item0_c = PyLong_AsUnsignedLong(pair_item0);
+        pos_index_t pair_item1_c = PyLong_AsUnsignedLong(pair_item1);
+        uint8_t value_c = PyLong_AsUnsignedLong(value);
         if (PyErr_Occurred()) {
             labels.clear();
         }
@@ -80,40 +80,42 @@ void FeatureGenerator::convert_py_labels_dict(PyObject *dict) {
     }
 }
 
-void FeatureGenerator::add_bq_sample(std::pair<long, long>& index, float bq) {
+void FeatureGenerator::add_bq_sample(std::pair<pos_index_t, pos_index_t>& index, float bq) {
     auto& info = stats_info[index];
     info.avg_bq = info.avg_bq + (bq - info.avg_bq)/ ++info.n_bq;
     
 }
 
-void FeatureGenerator::add_mq_sample(std::pair<long, long>& index, uint8_t mq) {
+void FeatureGenerator::add_mq_sample(std::pair<pos_index_t, pos_index_t>& index, uint8_t mq) {
     auto& info = stats_info[index];
     info.avg_mq = info.avg_mq + (float) (mq - info.avg_mq)/ ++info.n_mq;
 
 
 }
 
-void FeatureGenerator::increment_base_count(std::pair<long, long>& index, Bases b) {
-
+void FeatureGenerator::increment_base_count(std::pair<pos_index_t, pos_index_t>& index, Bases b) {
+    auto& s = stats_info[index];
+    s.n_total++;
     switch(b) {
         case Bases::A:
-            stats_info[index].n_A++;
+            s.n_A++;
             break;
         case Bases::C:
-            stats_info[index].n_C++;
+            s.n_C++;
             break;
         case Bases::G:
-            stats_info[index].n_G++;
+            s.n_G++;
             break;
         case Bases::T:
-            stats_info[index].n_T++;
+            s.n_T++;
             break;
         case Bases::GAP:
-            stats_info[index].n_GAP++;
+            s.n_GAP++;
             break;
         case Bases::UNKNOWN:
             std::cout << "Unknown base!" << std::endl;
-    }   
+    }  
+    
 }
 
 Bases FeatureGenerator::char_to_base(char c) {
@@ -197,8 +199,64 @@ uint8_t FeatureGenerator::char_to_forward_int(char c) {
     }
 }
 
+void FeatureGenerator::pos_queue_push(std::pair<pos_index_t, pos_index_t>& index) {
+    //std::cout << "counter in " << counter << std::endl;
+    bool is_uncertain = false;
+    auto& s = stats_info[index];
+    char draft_base = draft[index.first];
+    uint16_t num_total = s.n_total;
+    uint16_t num_same; //same as draft
+    if (index.second != 0) {
+        num_same = s.n_GAP;
+        uint16_t num_not_gap = num_total - num_same;
+        if ((float) num_not_gap/ num_total < NON_GAP_THRESHOLD) {
+            return;
+        }
+    } else if (draft_base == 'A') {
+        num_same = s.n_A;
+    } else if (draft_base == 'C') {
+        num_same = s.n_C;
+    } else if (draft_base == 'G') {
+        num_same = s.n_G;
+    } else {
+        num_same = s.n_T;
+    }
+    uint16_t num_diff = num_total - num_same;
 
-void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& segments, int star_pos_index, 
+    if ((float) num_diff/num_total >= UNCERTAIN_POSITION_THRESHOLD) {
+        is_uncertain = true;
+    } 
+     
+    if (is_uncertain) {
+        pos_queue.push_back(index);
+        distances.push(counter);
+        counter = 0;
+
+    } else {
+        pos_queue.push_back(index);
+        counter++;
+    }
+    //std::cout << "counter out " << counter << std::endl;
+}
+
+// should have at least num elements in the container
+void FeatureGenerator::pos_queue_pop(uint16_t num) {
+    
+    pos_queue.erase(pos_queue.begin(), pos_queue.begin() + num);
+    while (distances.size() > 0 && num >=(distances.front()+1)) {
+        num -= distances.front() + 1;
+        distances.pop();
+    }
+    if (distances.empty()) {
+        counter -= num;
+    } else {
+        // since distances not empty, the second while loop condition must be false 
+        distances.front() -= num;
+    }
+
+}
+
+void FeatureGenerator::align_center_star(pos_index_t base_index, std::vector<segment>& segments, int star_pos_index, 
         std::vector<segment>& no_ins_reads) {
 
     // The indices of all non label sequences
@@ -310,13 +368,12 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
   
     uint16_t pos_counts[non_label_seqs.size()] = {0};
 
-    long count = 1;
+    pos_index_t count = 1;
     // correspond to positions before the first position of star before aligning
     for (unsigned int i = 0; i < ins_positions[0].size(); i++) {
         auto& map = ins_positions[0][i];
-        auto index = std::pair<long, long>(base_index, count);
+        auto index = std::pair<pos_index_t, pos_index_t>(base_index, count);
         
-        pos_queue.emplace_back(base_index, count);
         count++;
         
 
@@ -347,16 +404,16 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
         }
 
         align_info[index] = map;
-        labels_info[index] = ins_positions_labels[0][i];
-        
+        if (has_labels) {
+            labels_info[index] = ins_positions_labels[0][i]; 
+        }
+        pos_queue_push(index);
     }
 
     // correspond to positions on star before aligning, and insertions after them(the inner loop)
     for (unsigned int i = 0; i < star.sequence.size(); i++) {
-        auto index = std::pair<long, long>(base_index, count);
+        auto index = std::pair<pos_index_t, pos_index_t>(base_index, count);
 
-        
-        pos_queue.emplace_back(base_index, count);
         count++;
         
         for (uint16_t k = 0 ; k < non_label_seqs.size(); k++) {
@@ -383,14 +440,16 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
 
         }
 
+        pos_queue_push(index); 
         align_info[index] = star_positions[i];
-        labels_info[index] = star_positions_labels[i]; 
+        if (has_labels) {
+            labels_info[index] = star_positions_labels[i];
+        }
 
         for (unsigned int j = 0; j < ins_positions[i+1].size(); j++) {
             auto& map = ins_positions[i+1][j];
-            auto index = std::pair<long, long>(base_index, count);
-           
-            pos_queue.emplace_back(base_index, count);
+            auto index = std::pair<pos_index_t, pos_index_t>(base_index, count);
+          
             count++;
             
             for (uint16_t k = 0; k< non_label_seqs.size(); k++) {
@@ -420,7 +479,10 @@ void FeatureGenerator::align_center_star(long base_index, std::vector<segment>& 
             }
 
             align_info[index] = map;
-            labels_info[index] = ins_positions_labels[i+1][j];
+            if (has_labels) {
+                labels_info[index] = ins_positions_labels[i+1][j];
+            }
+            pos_queue_push(index);
         }
     } 
 }
@@ -447,13 +509,13 @@ int FeatureGenerator::find_center(std::vector<segment>& segments) {
 
 }
 
-void FeatureGenerator::align_ins_longest_star(long base_index, std::vector<segment>& ins_segments, int longest_index,
+void FeatureGenerator::align_ins_longest_star(pos_index_t base_index, std::vector<segment>& ins_segments, int longest_index,
         std::vector<segment>& no_ins_reads) {
     align_center_star(base_index, ins_segments, longest_index, no_ins_reads);
 
 }
 
-void FeatureGenerator::align_ins_center_star(long base_index, std::vector<segment>& ins_segments,
+void FeatureGenerator::align_ins_center_star(pos_index_t base_index, std::vector<segment>& ins_segments,
         std::vector<segment>& no_ins_reads) {
     int center_index = find_center(ins_segments);
     align_center_star(base_index, ins_segments, center_index, no_ins_reads);
@@ -483,9 +545,9 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
         // Put the unaligned labels sequence into s
         std::string s;
         if (has_labels) {
-            std::pair<long, long> index {rpos, 0};
+            std::pair<pos_index_t, pos_index_t> index {rpos, 0};
             labels_info[index] = labels[index];
-            long ins_count = 1;
+            pos_index_t ins_count = 1;
             index = std::make_pair(rpos, ins_count);
             auto found = labels.find(index);
             while (found != labels.end()) {
@@ -499,8 +561,10 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
 
 
         if (s.size() > 0) {
-            ins_segments.emplace_back(std::move(s), LABEL_SEQ_ID);\
-        } 
+            ins_segments.emplace_back(std::move(s), LABEL_SEQ_ID);
+        }
+
+        std::pair<pos_index_t, pos_index_t> base_index(rpos, 0);
 
         while(column->has_next()) {
             auto r = column->next();
@@ -509,23 +573,22 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                 align_bounds.emplace(r->query_id(), std::make_pair(r->ref_start(), r->ref_end()));
             }
             strand.emplace(r->query_id(), !r->rev());
-            std::pair<long, long> index(rpos, 0);
-            if (align_info.find(index) == align_info.end()) {
-                pos_queue.emplace_back(rpos, 0);
-            }
+            //if (align_info.find(index) == align_info.end()) {
+            //    pos_queue_push(index);
+           // }
             if (r->is_del()) {
                 // DELETION
-                align_info[index].emplace(r->query_id(), PosInfo(Bases::GAP));
-                increment_base_count(index, Bases::GAP);
-                add_mq_sample(index, r->mqual());
-                add_bq_sample(index, ((float) r->qqual(-1) + r->qqual(0)) /2);
+                align_info[base_index].emplace(r->query_id(), PosInfo(Bases::GAP));
+                increment_base_count(base_index, Bases::GAP);
+                add_mq_sample(base_index, r->mqual());
+                add_bq_sample(base_index, ((float) r->qqual(-1) + r->qqual(0)) /2);
             } else {
                 // POSITION
                 auto qbase = r->qbase(0);
-                align_info[index].emplace(r->query_id(), PosInfo(qbase));
-                increment_base_count(index, qbase);
-                add_mq_sample(index, r->mqual());
-                add_bq_sample(index,  r->qqual(0));
+                align_info[base_index].emplace(r->query_id(), PosInfo(qbase));
+                increment_base_count(base_index, qbase);
+                add_mq_sample(base_index, r->mqual());
+                add_bq_sample(base_index,  r->qqual(0));
                 // INSERTION
                 if (r-> indel() > 0) {
                     std::string s;
@@ -546,7 +609,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
            }
           
         }
-       
+        pos_queue_push(base_index); 
         if (ins_segments.size() > 0) {
 
             align_ins_center_star(rpos, ins_segments, no_ins_reads);
@@ -554,7 +617,25 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
         } 
 
         //BUILD FEATURE MATRIX
+        //std::cout << "first index " << pos_queue.front().first << ", " << pos_queue.front().second << std::endl;
+        //std::cout << "front " << distances.front() << ", size: " << pos_queue.size() << std::endl;
         while (pos_queue.size() >= dimensions[1]) {
+            if (distances.empty())  {
+               // std::cout << "EMPTY" << std::endl;
+               // std::cout << "remove " << pos_queue.size() - dimensions[1]/2 << std::endl;
+                pos_queue_pop(pos_queue.size() - dimensions[1]/2);    
+                continue;
+                
+            } else if (distances.front() >= dimensions[1]) {
+               // std::cout << "GAP" << std::endl;
+                uint16_t a = distances.front() - dimensions[1]/2;
+                uint16_t b = pos_queue.size();
+                //std::cout << "remove " << std::min(a, b) << std::endl;
+                pos_queue_pop(std::min(a, b));
+                continue;
+            }
+
+                        
             std::set<uint32_t> valid_aligns;
             const auto it = pos_queue.begin();
 
@@ -645,14 +726,14 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                 }
 
             }
-
-            for (auto s = 0; s < dimensions[1]; s++) {
-                auto curr = it + s;
-                uint8_t value = labels_info[*curr];
-                value_ptr = (uint8_t*) PyArray_GETPTR1(Y, s);
-                *value_ptr = value;
+            if (has_labels) {
+                for (auto s = 0; s < dimensions[1]; s++) {
+                    auto curr = it + s;
+                    uint8_t value = labels_info[*curr];
+                    value_ptr = (uint8_t*) PyArray_GETPTR1(Y, s);
+                    *value_ptr = value;
+                }
             }
-
             data->X.push_back(X);
             data->X2.push_back(X2);
             data->Y.push_back(Y);
@@ -660,7 +741,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             for (auto it = pos_queue.begin(), end = pos_queue.begin() + WINDOW; it != end; ++it) {
                 align_info.erase(*it);
             }
-            pos_queue.erase(pos_queue.begin(), pos_queue.begin() + WINDOW);
+            pos_queue_pop(WINDOW);
         }
     }
 

@@ -90,6 +90,7 @@ def generate_train(args):
 def generate_infer(args):
     bam_X, ref, region = args
     region_string = f'{region.name}:{region.start+1}-{region.end}'
+    print(f'starting {region_string}')
     result = gen.generate_features(bam_X, ref, region_string, None)
     positions, examples, pos_stats = [], [], []
     

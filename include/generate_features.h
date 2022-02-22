@@ -8,23 +8,28 @@ extern "C" {
     #include "numpy/arrayobject.h"
 }
 
+#include <deque>
 #include <memory>
+#include <queue>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
 #include "models.h"
 
+typedef uint32_t pos_index_t;
+
 
 constexpr int dimensions[] = {50, 90}; 
 constexpr int dimensions2[] = {7, 90}; // dimensions for second matrix
 constexpr int WINDOW = dimensions[1] / 3;
 constexpr int REF_ROWS = 0;
-
+constexpr float UNCERTAIN_POSITION_THRESHOLD = 0;
+constexpr float NON_GAP_THRESHOLD = 0;
 constexpr uint64_t LABEL_SEQ_ID = -1;
 
 struct Data{
-    std::vector<std::vector<std::pair<long, long>>> positions;
+    std::vector<std::vector<std::pair<pos_index_t, pos_index_t>>> positions;
     std::vector<PyObject*> X;
     std::vector<PyObject*> Y;
     std::vector<PyObject*> X2;
@@ -36,7 +41,7 @@ struct PosInfo{
 };
 
 struct PosStats {
-
+    uint16_t n_total = 0;
     uint16_t n_GAP = 0;
     uint16_t n_A = 0;
     uint16_t n_C = 0;
@@ -83,15 +88,20 @@ class FeatureGenerator {
         std::unique_ptr<PositionIterator> pileup_iter;
         const char* draft;
         bool has_labels;
+        uint16_t counter = 0;
         
         // store progress
-        std::unordered_map<std::pair<long, long>, uint8_t, pair_hash> labels;
-        std::vector<std::pair<long, long>> pos_queue;
-        std::unordered_map<std::pair<long, long>, std::unordered_map<uint32_t, PosInfo>, pair_hash> align_info;
-        std::unordered_map<std::pair<long, long>, uint8_t, pair_hash> labels_info;
-        std::unordered_map<uint32_t, std::pair<long, long>> align_bounds;
+        std::unordered_map<std::pair<pos_index_t, pos_index_t>, uint8_t, pair_hash> labels;
+        std::deque<std::pair<pos_index_t, pos_index_t>> pos_queue;
+        std::unordered_map<std::pair<pos_index_t, pos_index_t>, std::unordered_map<uint32_t, PosInfo>, pair_hash> align_info;
+        std::unordered_map<std::pair<pos_index_t, pos_index_t>, uint8_t, pair_hash> labels_info;
+        std::unordered_map<uint32_t, std::pair<pos_index_t, pos_index_t>> align_bounds;
         std::unordered_map<uint32_t, bool> strand;
-        std::unordered_map<std::pair<long, long>, PosStats, pair_hash> stats_info;
+        std::unordered_map<std::pair<pos_index_t, pos_index_t>, PosStats, pair_hash> stats_info;
+        // how far away is each uncertain position away from the previous one
+        // or the start of the queue
+        std::queue<uint16_t> distances; 
+                        
         struct segment {
             std::string sequence;
             uint64_t index;
@@ -106,24 +116,28 @@ class FeatureGenerator {
         char forward_int_to_char(uint8_t i);
         uint8_t char_to_forward_int(char c);
             
-        void align_center_star(long base_index, std::vector<segment>& segments, int star_index,
+        void align_center_star(pos_index_t base_index, std::vector<segment>& segments, int star_index,
             std::vector<segment>& no_ins_reads);
 
-        void align_ins_longest_star(long base_index, std::vector<segment>& ins_segments, int longest_index, 
+        void align_ins_longest_star(pos_index_t base_index, std::vector<segment>& ins_segments, int longest_index, 
             std::vector<segment>& no_ins_reads);
 
-        void align_ins_center_star(long base_index, std::vector<segment>& ins_segments,
+        void align_ins_center_star(pos_index_t base_index, std::vector<segment>& ins_segments,
             std::vector<segment>& no_ins_reads);
 
         int find_center(std::vector<segment>& segments);
 
         void convert_py_labels_dict(PyObject *dict);
 
-        void increment_base_count(std::pair<long, long>& index, Bases b);
+        void increment_base_count(std::pair<pos_index_t, pos_index_t>& index, Bases b);
 
-        void add_bq_sample(std::pair<long, long>& index, float bq);
+        void add_bq_sample(std::pair<pos_index_t, pos_index_t>& index, float bq);
 
-        void add_mq_sample(std::pair<long, long>& index, uint8_t mq);
+        void add_mq_sample(std::pair<pos_index_t, pos_index_t>& index, uint8_t mq);
+
+        void pos_queue_push(std::pair<pos_index_t, pos_index_t>& index);
+
+        void pos_queue_pop(uint16_t num);
 
     public:
         FeatureGenerator(const char* filename, const char* ref, const char* region, PyObject* dict);   

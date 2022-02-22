@@ -29,8 +29,8 @@ def load_arguments_from_file(path, inference):
     return generate_args_for_feature_gen(tuples, inference)
 
 # Inputs: A list of tuples of lengths 2 or 3. The items are 1. path to calls to draft bam 2. path to draft fasta 3. path to truth to draft bam (optional).
-# Tuples should contain 3. if inference is true.
-# Ouput:1. A list of of tuples (path to calls to draft bam, path to truth to draft bam, draft sequence, a region in the draft) if inference is True,
+# Tuples should contain 3. if inference is False.
+# Ouput:1. A list of of tuples (path to calls to draft bam, path to truth to draft bam, draft sequence, a region in the draft) if inference is False,
 # and path to truth to draft bam is None otherwise. 2. 
 def generate_args_for_feature_gen(list_of_string_tuples, inference):
     results = []
@@ -76,6 +76,7 @@ class NoStorageDataset(torch.utils.data.IterableDataset):
             bam_X, bam_Y, ref, region = self.list_of_args[i]
             if self.infer:  
                 region_string = f'{region.name}:{region.start+1}-{region.end}'
+                print(f'starting {region_string}')
                 result = gen.generate_features(bam_X, ref, region_string, None)
                 for P, X, Y, X2 in zip(*result):
                     P = [list(p) for p in P]

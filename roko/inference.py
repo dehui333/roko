@@ -135,8 +135,20 @@ def infer(data, model_path, out, workers=0, batch_size=128):
         first = pos_sorted[0][0]
         contig_data = contigs[contig]
         seq = contig_data[0][:first]
-
+        
+        patch_start = first
+        patch_end = first
         for i, p in enumerate(pos_sorted):
+            if p[0] > patch_start or (p[0] == patch_start and p[1] > 0):
+                if p[1] == 0:
+                    patch_end = p[0]
+                else:
+                    patch_end = p[0] + 1
+                seq += contig_data[0][patch_start:patch_end]
+                patch_start = patch_end
+            if p[1] == 0:
+                patch_start += 1
+            
             base, _ = values[p].most_common(1)[0]
             if base == GAP:
                 continue
