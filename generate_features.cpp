@@ -623,12 +623,12 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             if (distances.empty())  {
                // std::cout << "EMPTY" << std::endl;
                // std::cout << "remove " << pos_queue.size() - dimensions[1]/2 << std::endl;
-                pos_queue_pop(pos_queue.size() - dimensions[1]/2);    
+                pos_queue_pop(pos_queue.size() - dimensions[1]/4 * 3);    
                 continue;
                 
             } else if (distances.front() >= dimensions[1]) {
                // std::cout << "GAP" << std::endl;
-                uint16_t a = distances.front() - dimensions[1]/2;
+                uint16_t a = distances.front() - dimensions[1]/4 * 3;
                 uint16_t b = pos_queue.size();
                 //std::cout << "remove " << std::min(a, b) << std::endl;
                 pos_queue_pop(std::min(a, b));

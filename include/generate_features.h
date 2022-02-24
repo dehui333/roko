@@ -24,8 +24,8 @@ constexpr int dimensions[] = {50, 90};
 constexpr int dimensions2[] = {7, 90}; // dimensions for second matrix
 constexpr int WINDOW = dimensions[1] / 3;
 constexpr int REF_ROWS = 0;
-constexpr float UNCERTAIN_POSITION_THRESHOLD = 0;
-constexpr float NON_GAP_THRESHOLD = 0;
+constexpr float UNCERTAIN_POSITION_THRESHOLD = 0.01;
+constexpr float NON_GAP_THRESHOLD = 0.01;
 constexpr uint64_t LABEL_SEQ_ID = -1;
 
 struct Data{
