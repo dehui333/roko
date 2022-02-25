@@ -25,6 +25,36 @@ std::unordered_map<Bases, uint8_t, EnumClassHash> ENCODED_BASES = {
     {Bases::GAP, 4},
     {Bases::UNKNOWN, 5}
 };
+static constexpr uint8_t CHAR_TO_FORWARD_INT_MAP[] = {
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 4, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 0, 5, 1, 5, 5,
+    5, 2, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 3, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5
+};
+
+static constexpr char FORWARD_INT_TO_CHAR_MAP[] = {'A', 'C', 'G', 'T', '*', 'N'};
 
 FeatureGenerator::FeatureGenerator(const char* filename, const char* ref, const char* region, PyObject* dict): draft(ref) {
     
@@ -118,8 +148,9 @@ void FeatureGenerator::increment_base_count(std::pair<pos_index_t, pos_index_t>&
     
 }
 
+
 Bases FeatureGenerator::char_to_base(char c) {
-    switch (c) {
+   /*switch (c) {
         case 'A':
             return Bases::A;
         case 'C':
@@ -136,11 +167,13 @@ Bases FeatureGenerator::char_to_base(char c) {
         default:
             std::cout << "Invalid argument to char_to_base!" << std::endl;
             return Bases::UNKNOWN;
-    }
+    }*/
+
+    return static_cast<Bases>(static_cast<int>(CHAR_TO_FORWARD_INT_MAP[static_cast<uint8_t>(c)]));
 }
 
 char FeatureGenerator::base_to_char(Bases b) {
-    switch (b) {
+    /*switch (b) {
         case Bases::A:
             return 'A';
         case Bases::C:
@@ -155,11 +188,12 @@ char FeatureGenerator::base_to_char(Bases b) {
         default:
             std::cout << "Unknown base!" << std::endl;
             return 'N';
-    }
+    }*/
+    return FORWARD_INT_TO_CHAR_MAP[static_cast<int>(b)];
 }
 
 char FeatureGenerator::forward_int_to_char(uint8_t i) {
-    switch (i) {
+    /*switch (i) {
         case 0:
             return 'A';
         case 1:
@@ -175,12 +209,14 @@ char FeatureGenerator::forward_int_to_char(uint8_t i) {
         default:
             std::cout << "Invalid argument for forward_int_to_char!" << std::endl; 
             return 'N';
-    }
+    }*/
+    return FORWARD_INT_TO_CHAR_MAP[i];
 }
 
 
+
 uint8_t FeatureGenerator::char_to_forward_int(char c) {
-    switch (c) {
+    /*switch (c) {
         case 'A':
             return 0;
         case 'C':
@@ -196,8 +232,11 @@ uint8_t FeatureGenerator::char_to_forward_int(char c) {
         default:
             std::cout << "Invalid argument for char_to_forward_int!" << std::endl;
             return 5;
-    }
+    }*/
+    return CHAR_TO_FORWARD_INT_MAP[static_cast<uint8_t>(c)];
 }
+
+
 
 void FeatureGenerator::pos_queue_push(std::pair<pos_index_t, pos_index_t>& index) {
     //std::cout << "counter in " << counter << std::endl;
