@@ -1,5 +1,5 @@
 #ifndef GENERATE_FEATURES_H
-#define GENERATE_FEATYRES_H
+#define GENERATE_FEATURES_H
 
 #include <Python.h>
 extern "C" {
