@@ -149,7 +149,9 @@ def infer(data, model_path, out, workers=0, batch_size=128):
             if p[1] == 0:
                 patch_start += 1
             
+            
             base, _ = values[p].most_common(1)[0]
+            
             if base == GAP:
                 continue
             seq += base

@@ -16,6 +16,10 @@
 
 #include "edlib.h"
 #include "generate_features.h"
+//static uint64_t num_in = 0;
+//static uint64_t num_throw = 0;
+//static uint64_t num_filter = 0;
+
 // For reverse strand add +6
 std::unordered_map<Bases, uint8_t, EnumClassHash> ENCODED_BASES = {
     {Bases::A, 0},
@@ -25,6 +29,7 @@ std::unordered_map<Bases, uint8_t, EnumClassHash> ENCODED_BASES = {
     {Bases::GAP, 4},
     {Bases::UNKNOWN, 5}
 };
+
 static constexpr uint8_t CHAR_TO_FORWARD_INT_MAP[] = {
     5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
     5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
@@ -126,21 +131,43 @@ void FeatureGenerator::add_mq_sample(std::pair<pos_index_t, pos_index_t>& index,
 void FeatureGenerator::increment_base_count(std::pair<pos_index_t, pos_index_t>& index, Bases b) {
     auto& s = stats_info[index];
     s.n_total++;
+    Bases draft_base = Bases::GAP;
+    if (index.second == 0) {
+        draft_base = char_to_base(draft[index.first]);
+    }
+    bool diff = draft_base != b;
     switch(b) {
         case Bases::A:
             s.n_A++;
+            if (diff && s.n_A > s.largest_diff) {
+               s.largest_diff = s.n_A;
+            }
             break;
         case Bases::C:
             s.n_C++;
+            if (diff && s.n_C > s.largest_diff) {
+                s.largest_diff = s.n_C;
+            }
+
             break;
         case Bases::G:
             s.n_G++;
+            if (diff && s.n_G > s.largest_diff) {
+                s.largest_diff = s.n_G;
+            }
             break;
         case Bases::T:
             s.n_T++;
+            if (diff && s.n_T > s.largest_diff) {
+                s.largest_diff = s.n_T;
+            }
             break;
         case Bases::GAP:
             s.n_GAP++;
+            if (diff && s.n_GAP > s.largest_diff) {
+                s.largest_diff = s.n_GAP;
+            }
+
             break;
         case Bases::UNKNOWN:
             std::cout << "Unknown base!" << std::endl;
@@ -242,16 +269,18 @@ void FeatureGenerator::pos_queue_push(std::pair<pos_index_t, pos_index_t>& index
     //std::cout << "counter in " << counter << std::endl;
     bool is_uncertain = false;
     auto& s = stats_info[index];
-    char draft_base = draft[index.first];
+    //char draft_base = draft[index.first];
     uint16_t num_total = s.n_total;
-    uint16_t num_same; //same as draft
+    //uint16_t num_same; //same as draft
     if (index.second != 0) {
-        num_same = s.n_GAP;
-        uint16_t num_not_gap = num_total - num_same;
-        if ((float) num_not_gap/ num_total < NON_GAP_THRESHOLD) {
+        //num_same = s.n_GAP;
+        //uint16_t num_not_gap = num_total - s.n_GAP;
+        //std::cout << "index " << index.first << ", " << index.second << " " << (float) s.largest_diff/num_total << std::endl;
+        if ((float) s.largest_diff/ num_total < NON_GAP_THRESHOLD) {
+            //num_filter++;
             return;
         }
-    } else if (draft_base == 'A') {
+    } /*else if (draft_base == 'A') {
         num_same = s.n_A;
     } else if (draft_base == 'C') {
         num_same = s.n_C;
@@ -260,12 +289,16 @@ void FeatureGenerator::pos_queue_push(std::pair<pos_index_t, pos_index_t>& index
     } else {
         num_same = s.n_T;
     }
-    uint16_t num_diff = num_total - num_same;
-
-    if ((float) num_diff/num_total >= UNCERTAIN_POSITION_THRESHOLD) {
+    uint16_t num_diff = num_total - num_same; */
+    //if (index.first == 5684469 && index.second > 0) {
+    //    std::cout << index.first << ", " << index.second << std::endl;
+    //    std::cout << (float) num_diff/num_total << std::endl;
+   // }
+    //num_in++;
+    if ((float) s.largest_diff/num_total >= UNCERTAIN_POSITION_THRESHOLD) {
         is_uncertain = true;
     } 
-     
+   // std::cout << index.first << ", " << index.second << " : " << (float) s.largest_diff/num_total << std::endl;
     if (is_uncertain) {
         pos_queue.push_back(index);
         distances.push(counter);
@@ -661,18 +694,24 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
         while (pos_queue.size() >= dimensions[1]) {
             if (distances.empty())  {
                // std::cout << "EMPTY" << std::endl;
-               // std::cout << "remove " << pos_queue.size() - dimensions[1]/2 << std::endl;
-                pos_queue_pop(pos_queue.size() - dimensions[1]/4 * 3);    
+                //std::cout << "remove " << pos_queue.size() - dimensions[1]/4 * 3 << std::endl;
+                
+                //auto v = pos_queue.size() - dimensions[1]/4 * 3;
+                //num_throw += v;
+                pos_queue_pop(pos_queue.size() - dimensions[1]/4 * 3);
                 continue;
                 
             } else if (distances.front() >= dimensions[1]) {
-               // std::cout << "GAP" << std::endl;
+                //std::cout << "GAP" << std::endl;
                 uint16_t a = distances.front() - dimensions[1]/4 * 3;
                 uint16_t b = pos_queue.size();
                 //std::cout << "remove " << std::min(a, b) << std::endl;
+                
+                //auto v = std::min(a, b);
+                //num_throw += v;
                 pos_queue_pop(std::min(a, b));
                 continue;
-            }
+            } 
 
                         
             std::set<uint32_t> valid_aligns;
@@ -783,7 +822,10 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             pos_queue_pop(WINDOW);
         }
     }
-
+   // std::cout << "num in: " << num_in << std::endl;
+    //std::cout << "num throw: " << num_throw << std::endl;
+    //std::cout << "num filter: " << num_filter << std::endl;
+    //std::cout << "---------------------" << std::endl;    
     return data;
 }
 

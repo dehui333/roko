@@ -24,7 +24,7 @@ constexpr int dimensions[] = {50, 90};
 constexpr int dimensions2[] = {7, 90}; // dimensions for second matrix
 constexpr int WINDOW = dimensions[1] / 3;
 constexpr int REF_ROWS = 0;
-constexpr float UNCERTAIN_POSITION_THRESHOLD = 0.01;
+constexpr float UNCERTAIN_POSITION_THRESHOLD = 0.15;
 constexpr float NON_GAP_THRESHOLD = 0.01;
 constexpr uint64_t LABEL_SEQ_ID = -1;
 
@@ -51,6 +51,7 @@ struct PosStats {
     uint16_t n_mq = 0;
     float avg_bq = 0;
     float avg_mq = 0;
+    uint16_t largest_diff = 0;
     
     //PosStats() : avg_mq(0), n_mq(0), avg_pq(0), n_pq(0) {};
     

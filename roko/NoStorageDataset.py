@@ -6,7 +6,6 @@ import math
 import numpy as np
 import pysam
 import torch
-
 '''
 NoStorageDataset takes 2 arguments to initialize: 
 1. A list of tuples (path to the bam file for calls to draft, path to the draft fasta, path to the bam file for truth to draft)
@@ -71,17 +70,18 @@ class NoStorageDataset(torch.utils.data.IterableDataset):
         self.start = 0
         self.end = len(self.list_of_args)
         
+        
     def __iter__(self):
         for i in range(self.start, self.end):
             bam_X, bam_Y, ref, region = self.list_of_args[i]
             if self.infer:  
-                region_string = f'{region.name}:{region.start+1}-{region.end}'
+                region_string = f'{region.name}:{region.start+1}-{region.end}' 
                 print(f'starting {region_string}')
                 result = gen.generate_features(bam_X, ref, region_string, None)
                 for P, X, Y, X2 in zip(*result):
-                    P = [list(p) for p in P]
+                    #P = [list(p) for p in P]
                     yield region.name, torch.tensor(P), X, X2.astype(np.int16)        
-                print(f'Finished generating features for {region.name}:{region.start+1}-{region.end}.')
+                print(f'Finished generating features for {region.name}:{region.start+1}-{region.end}. ')
                 
             else: 
                 alignments = get_aligns(bam_Y, ref_name=region.name, start=region.start, end=region.end)
