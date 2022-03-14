@@ -21,7 +21,7 @@ typedef uint32_t pos_index_t;
 
 
 constexpr int dimensions[] = {50, 90}; 
-constexpr int dimensions2[] = {7, 90}; // dimensions for second matrix
+constexpr int dimensions2[] = {5, 90}; // dimensions for second matrix
 constexpr int WINDOW = dimensions[1] / 3;
 constexpr int REF_ROWS = 0;
 constexpr float UNCERTAIN_POSITION_THRESHOLD = 0.15;
@@ -120,13 +120,15 @@ class FeatureGenerator {
         void align_center_star(pos_index_t base_index, std::vector<segment>& segments, int star_index,
             std::vector<segment>& no_ins_reads);
 
-        void align_ins_longest_star(pos_index_t base_index, std::vector<segment>& ins_segments, int longest_index, 
+        void align_ins_longest_star(pos_index_t base_index, std::vector<segment>& ins_segments, 
             std::vector<segment>& no_ins_reads);
 
         void align_ins_center_star(pos_index_t base_index, std::vector<segment>& ins_segments,
             std::vector<segment>& no_ins_reads);
 
         int find_center(std::vector<segment>& segments);
+
+        int find_longest(std::vector<segment>& segments);
 
         void convert_py_labels_dict(PyObject *dict);
 

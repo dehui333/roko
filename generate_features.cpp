@@ -581,8 +581,24 @@ int FeatureGenerator::find_center(std::vector<segment>& segments) {
 
 }
 
-void FeatureGenerator::align_ins_longest_star(pos_index_t base_index, std::vector<segment>& ins_segments, int longest_index,
+int FeatureGenerator::find_longest(std::vector<segment>& segments) {
+    int best_index = 0;
+    int highest_len = 0;
+    for (int i = 0; i < segments.size(); i++) {
+        int len = segments[i].sequence.size();
+        if (len > highest_len) {
+            best_index = i;
+            highest_len = len;
+        }
+    }
+    return best_index;
+}
+
+
+
+void FeatureGenerator::align_ins_longest_star(pos_index_t base_index, std::vector<segment>& ins_segments,
         std::vector<segment>& no_ins_reads) {
+    int longest_index = find_longest(ins_segments);
     align_center_star(base_index, ins_segments, longest_index, no_ins_reads);
 
 }
@@ -684,7 +700,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
         pos_queue_push(base_index); 
         if (ins_segments.size() > 0) {
 
-            align_ins_center_star(rpos, ins_segments, no_ins_reads);
+            align_ins_longest_star(rpos, ins_segments, no_ins_reads);
 
         } 
 
@@ -764,10 +780,10 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                 *value_ptr_16 = pos_stats.n_G;
                 value_ptr_16 = (uint16_t*) PyArray_GETPTR2(X2, 4, s);
                 *value_ptr_16 = pos_stats.n_T;
-                 value_ptr_16 = (uint16_t*) PyArray_GETPTR2(X2, 5, s);
-                *value_ptr_16 = static_cast<uint16_t>(pos_stats.avg_mq);
-                value_ptr_16 = (uint16_t*) PyArray_GETPTR2(X2, 6, s);
-                *value_ptr_16 = static_cast<uint16_t>(pos_stats.avg_bq);
+                // value_ptr_16 = (uint16_t*) PyArray_GETPTR2(X2, 5, s);
+                //*value_ptr_16 = static_cast<uint16_t>(pos_stats.avg_mq);
+                //value_ptr_16 = (uint16_t*) PyArray_GETPTR2(X2, 6, s);
+                //*value_ptr_16 = static_cast<uint16_t>(pos_stats.avg_bq);
 
             }
 
