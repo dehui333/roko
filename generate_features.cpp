@@ -573,6 +573,7 @@ int FeatureGenerator::find_center(std::vector<segment>& segments) {
     }
     int best_pos_index = 0;
     for (unsigned int i = 0; i < segments.size(); i++) {
+        if (segments[i].index == LABEL_SEQ_ID) continue;
         if (dists[i] < dists[best_pos_index]) {
             best_pos_index = i;
         }
@@ -585,6 +586,7 @@ int FeatureGenerator::find_longest(std::vector<segment>& segments) {
     int best_index = 0;
     int highest_len = 0;
     for (int i = 0; i < segments.size(); i++) {
+        if (segments[i].index == LABEL_SEQ_ID) continue;
         int len = segments[i].sequence.size();
         if (len > highest_len) {
             best_index = i;
