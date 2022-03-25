@@ -117,13 +117,13 @@ class FeatureGenerator {
         char forward_int_to_char(uint8_t i);
         uint8_t char_to_forward_int(char c);
             
-        void align_center_star(pos_index_t base_index, std::vector<segment>& segments, int star_index,
+        void align_to_target(pos_index_t base_index, std::vector<segment>& segments, int target_index,
             std::vector<segment>& no_ins_reads);
 
-        void align_ins_longest_star(pos_index_t base_index, std::vector<segment>& ins_segments, 
+        void align_ins_longest(pos_index_t base_index, std::vector<segment>& ins_segments, 
             std::vector<segment>& no_ins_reads);
 
-        void align_ins_center_star(pos_index_t base_index, std::vector<segment>& ins_segments,
+        void align_ins_center(pos_index_t base_index, std::vector<segment>& ins_segments,
             std::vector<segment>& no_ins_reads);
 
         int find_center(std::vector<segment>& segments);

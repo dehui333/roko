@@ -328,7 +328,7 @@ void FeatureGenerator::pos_queue_pop(uint16_t num) {
 
 }
 
-void FeatureGenerator::align_center_star(pos_index_t base_index, std::vector<segment>& segments, int star_pos_index, 
+void FeatureGenerator::align_to_target(pos_index_t base_index, std::vector<segment>& segments, int target_index, 
         std::vector<segment>& no_ins_reads) {
 
     // The indices of all non label sequences
@@ -336,29 +336,29 @@ void FeatureGenerator::align_center_star(pos_index_t base_index, std::vector<seg
     non_label_seqs.reserve(segments.size());
 
     // Align all to this
-    segment star = segments[star_pos_index];
+    segment& target = segments[target_index];
 
-    // stores bases aligned to original positions on the star   
-    std::unordered_map<uint32_t, PosInfo> star_positions[star.sequence.size()];     
+    // stores bases aligned to original positions on the target   
+    std::unordered_map<uint32_t, PosInfo> target_positions[target.sequence.size()];     
 
     // stores bases aligned to gaps inserted into the original seq of star
-    std::vector<std::unordered_map<uint32_t, PosInfo>> ins_positions[star.sequence.size()+1]; 
+    std::vector<std::unordered_map<uint32_t, PosInfo>> ins_positions[target.sequence.size()+1]; 
 
-    // stores labels aligned to the positions on the star sequence. By default all gaps
-    uint8_t star_positions_labels[star.sequence.size()];  
-    for (unsigned int i = 0; i < star.sequence.size(); i ++) {
-        star_positions_labels[i] = ENCODED_BASES[Bases::GAP];
+    // stores labels aligned to the positions on the target sequence. By default all gaps
+    uint8_t target_positions_labels[target.sequence.size()];  
+    for (unsigned int i = 0; i < target.sequence.size(); i ++) {
+        target_positions_labels[i] = ENCODED_BASES[Bases::GAP];
     }
     
     // stores the labels aligned to the positions where the star has gaps after aligning
-    std::vector<uint8_t> ins_positions_labels[star.sequence.size()+1];    
+    std::vector<uint8_t> ins_positions_labels[target.sequence.size()+1];    
     
     int total_ins_pos = 0;
     for (auto& s : segments) {
         if (s.index != LABEL_SEQ_ID) non_label_seqs.push_back(&s);
-        if (s.index != star.index) {
-            EdlibAlignResult result = edlibAlign(s.sequence.c_str(), s.sequence.size(), star.sequence.c_str(),
-                    star.sequence.size(), edlibNewAlignConfig(-1, EDLIB_MODE_NW, EDLIB_TASK_PATH, NULL, 0));
+        if (s.index != target.index) {
+            EdlibAlignResult result = edlibAlign(s.sequence.c_str(), s.sequence.size(), target.sequence.c_str(),
+                    target.sequence.size(), edlibNewAlignConfig(-1, EDLIB_MODE_NW, EDLIB_TASK_PATH, NULL, 0));
 
             int ref_pos = -1; // pointing to before next to read ref base
             int query_pos = -1; // pointing to before next to read query base 
@@ -373,9 +373,9 @@ void FeatureGenerator::align_center_star(pos_index_t base_index, std::vector<seg
                         base_at_pos = char_to_base(char_at_pos);
                         ref_pos++;
                         if (s.index == LABEL_SEQ_ID) {
-                            star_positions_labels[ref_pos] = char_to_forward_int(char_at_pos);
+                            target_positions_labels[ref_pos] = char_to_forward_int(char_at_pos);
                         } else {
-                            star_positions[ref_pos].emplace(s.index, PosInfo(base_at_pos));
+                            target_positions[ref_pos].emplace(s.index, PosInfo(base_at_pos));
                             
                         }
                         break;
@@ -407,9 +407,9 @@ void FeatureGenerator::align_center_star(pos_index_t base_index, std::vector<seg
                         base_at_pos = char_to_base(char_at_pos);
                         ref_pos++;
                         if (s.index == LABEL_SEQ_ID) {
-                            star_positions_labels[ref_pos] = char_to_forward_int(char_at_pos);
+                            target_positions_labels[ref_pos] = char_to_forward_int(char_at_pos);
                         } else {
-                            star_positions[ref_pos].emplace(s.index, PosInfo(base_at_pos));
+                            target_positions[ref_pos].emplace(s.index, PosInfo(base_at_pos));
                         }
                         break;
                     default:
@@ -427,9 +427,9 @@ void FeatureGenerator::align_center_star(pos_index_t base_index, std::vector<seg
                 const char char_at_pos = s.sequence[i];
                 Bases base_at_pos = char_to_base(char_at_pos);               
                 if (s.index == LABEL_SEQ_ID) {
-                    star_positions_labels[i] = char_to_forward_int(char_at_pos);
+                    target_positions_labels[i] = char_to_forward_int(char_at_pos);
                 } else {
-                    star_positions[i].emplace(s.index, PosInfo(base_at_pos));
+                    target_positions[i].emplace(s.index, PosInfo(base_at_pos));
                 }
             }
 
@@ -483,15 +483,15 @@ void FeatureGenerator::align_center_star(pos_index_t base_index, std::vector<seg
     }
 
     // correspond to positions on star before aligning, and insertions after them(the inner loop)
-    for (unsigned int i = 0; i < star.sequence.size(); i++) {
+    for (unsigned int i = 0; i < target.sequence.size(); i++) {
         auto index = std::pair<pos_index_t, pos_index_t>(base_index, count);
 
         count++;
         
         for (uint16_t k = 0 ; k < non_label_seqs.size(); k++) {
             auto& s = non_label_seqs[k];
-            if (star_positions[i].find(s->index) == star_positions[i].end()) {
-                star_positions[i].emplace(s->index, PosInfo(Bases::GAP));
+            if (target_positions[i].find(s->index) == target_positions[i].end()) {
+                target_positions[i].emplace(s->index, PosInfo(Bases::GAP));
                 add_bq_sample(index, ((float) s->bqs[pos_counts[k]] + s->bqs[pos_counts[k] + 1])/2);
                 add_mq_sample(index, s->mq);
 
@@ -502,20 +502,20 @@ void FeatureGenerator::align_center_star(pos_index_t base_index, std::vector<seg
             }
         }
         for (auto& s: no_ins_reads) {
-            star_positions[i].emplace(s.index, PosInfo(Bases::GAP));
+            target_positions[i].emplace(s.index, PosInfo(Bases::GAP));
             add_bq_sample(index, ((float) s.bqs[0] + s.bqs[1]) /2);
             add_mq_sample(index, s.mq);
         }
-        for (auto& pair: star_positions[i]) {
+        for (auto& pair: target_positions[i]) {
             auto b = pair.second.base;
             increment_base_count(index, b);  
 
         }
 
         pos_queue_push(index); 
-        align_info[index] = star_positions[i];
+        align_info[index] = target_positions[i];
         if (has_labels) {
-            labels_info[index] = star_positions_labels[i];
+            labels_info[index] = target_positions_labels[i];
         }
 
         for (unsigned int j = 0; j < ins_positions[i+1].size(); j++) {
@@ -598,17 +598,17 @@ int FeatureGenerator::find_longest(std::vector<segment>& segments) {
 
 
 
-void FeatureGenerator::align_ins_longest_star(pos_index_t base_index, std::vector<segment>& ins_segments,
+void FeatureGenerator::align_ins_longest(pos_index_t base_index, std::vector<segment>& ins_segments,
         std::vector<segment>& no_ins_reads) {
     int longest_index = find_longest(ins_segments);
-    align_center_star(base_index, ins_segments, longest_index, no_ins_reads);
+    align_to_target(base_index, ins_segments, longest_index, no_ins_reads);
 
 }
 
-void FeatureGenerator::align_ins_center_star(pos_index_t base_index, std::vector<segment>& ins_segments,
+void FeatureGenerator::align_ins_center(pos_index_t base_index, std::vector<segment>& ins_segments,
         std::vector<segment>& no_ins_reads) {
     int center_index = find_center(ins_segments);
-    align_center_star(base_index, ins_segments, center_index, no_ins_reads);
+    align_to_target(base_index, ins_segments, center_index, no_ins_reads);
 
 }
 
@@ -702,7 +702,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
         pos_queue_push(base_index); 
         if (ins_segments.size() > 0) {
 
-            align_ins_longest_star(rpos, ins_segments, no_ins_reads);
+            align_ins_longest(rpos, ins_segments, no_ins_reads);
 
         } 
 
