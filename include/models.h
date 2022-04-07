@@ -23,6 +23,11 @@ extern "C" {
 
     constexpr uint8_t min_mapping_quality = 10;
     constexpr uint16_t filter_flag = BAM_FUNMAP | BAM_FDUP | BAM_FQCFAIL | BAM_FSUPPLEMENTARY | BAM_FSECONDARY;
+
+    constexpr uint8_t min_mapping_quality2 = 0;
+    constexpr uint16_t filter_flag2 = BAM_FUNMAP | BAM_FDUP | BAM_FQCFAIL;
+
+
 }
 
 enum class Bases {A = 0, C = 1, G = 2, T = 3, GAP = 4, UNKNOWN= 5};
@@ -48,7 +53,7 @@ std::unique_ptr<BAMFile> readBAM(const char*);
 class BAMFile {
 public:
     friend std::unique_ptr<BAMFile> readBAM(const char*);
-    std::unique_ptr<PositionIterator> pileup(const std::string&);
+    std::unique_ptr<PositionIterator> pileup(const std::string&, bool inclusive=false);
 
 protected:
     std::unique_ptr<htsFile, decltype(&hts_close)> bam_;
@@ -62,7 +67,7 @@ protected:
 
 class PositionIterator {
 public:
-    friend std::unique_ptr<PositionIterator> BAMFile::pileup(const std::string &);
+    friend std::unique_ptr<PositionIterator> BAMFile::pileup(const std::string &, bool inclusive);
     std::unique_ptr<Position> next();
     bool has_next();
     int start() {return region_->start;};

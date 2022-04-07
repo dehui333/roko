@@ -102,7 +102,6 @@ def generate_infer(args):
     print(f'Finished generating examples for {region.name}:{region.start+1}-{region.end}.')
     return region.name, positions, examples, None, pos_stats
 
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('ref', type=str)
@@ -114,11 +113,16 @@ def main():
 
     inference = False if args.Y else True
     size = 0
-
+    
+    #contig_names = []
+    #contig_lens = []
     with open(args.ref, 'r') as handle:
         refs = [(str(r.id), str(r.seq)) for r in SeqIO.parse(handle, 'fasta')]
+    #    for pair in refs:
+    #        contig_names.append(pair[0])
+    #        contig_lens.append(len(pair[1]))
         
-
+    #gen.initialize(args.X, contig_names, contig_lens)
     with DataWriter(args.o, inference) as data:
         data.write_contigs(refs)
 
@@ -137,9 +141,9 @@ def main():
         
         with Pool(processes=args.t) as pool:
             finished = 0
-            for result in pool.imap(func, arguments):
-                if not result:
-                    continue
+            for result in pool.imap_unordered(func, arguments):
+                #if not result:
+                #    continue
                 c, p, x, y, x2 = result
                 data.store(c, p, x, y, x2)
                 finished += 1
