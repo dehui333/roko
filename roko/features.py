@@ -46,7 +46,7 @@ def generate_train(args):
         print('No alignments.')
         return None
 
-    positions, examples, labels, pos_stats = [], [], [], []
+    positions, examples, labels, pos_stats, cov = [], [], [], [], []
 
     for a in filtered:
         pos_labels = dict()
@@ -64,7 +64,7 @@ def generate_train(args):
 
         result = gen.generate_features(bam_X, str(ref), region_string, pos_labels)
 
-        for P, X, Y, X2 in zip(*result):
+        for P, X, Y, X2, X3 in zip(*result):
           
             to_yield = True
 
@@ -80,11 +80,12 @@ def generate_train(args):
                 examples.append(X)
                 labels.append(Y)
                 pos_stats.append(X2)
+                cov.append(X3)
 
                
                 
     print(f'Finished generating examples for {region.name}:{region.start+1}-{region.end}.')
-    return region.name, positions, examples, labels, pos_stats
+    return region.name, positions, examples, labels, pos_stats, cov
 
 
 def generate_infer(args):
@@ -92,15 +93,16 @@ def generate_infer(args):
     region_string = f'{region.name}:{region.start+1}-{region.end}'
     print(f'starting {region_string}')
     result = gen.generate_features(bam_X, ref, region_string, None)
-    positions, examples, pos_stats = [], [], []
+    positions, examples, pos_stats, cov  = [], [], [], []
     
-    for P, X, Y, X2 in zip(*result):
+    for P, X, Y, X2, X3 in zip(*result):
         positions.append(P)
         examples.append(X)
         pos_stats.append(X2)
+        cov.append(X3)
                     
     print(f'Finished generating examples for {region.name}:{region.start+1}-{region.end}.')
-    return region.name, positions, examples, None, pos_stats
+    return region.name, positions, examples, None, pos_stats, cov
 
 def main():
     parser = argparse.ArgumentParser()
@@ -114,15 +116,15 @@ def main():
     inference = False if args.Y else True
     size = 0
     
-    #contig_names = []
-    #contig_lens = []
+    contig_names = []
+    contig_lens = []
     with open(args.ref, 'r') as handle:
         refs = [(str(r.id), str(r.seq)) for r in SeqIO.parse(handle, 'fasta')]
-    #    for pair in refs:
-    #        contig_names.append(pair[0])
-    #        contig_lens.append(len(pair[1]))
+        for pair in refs:
+            contig_names.append(pair[0])
+            contig_lens.append(len(pair[1]))
         
-    #gen.initialize(args.X, contig_names, contig_lens)
+    gen.initialize(args.X, contig_names, contig_lens)
     with DataWriter(args.o, inference) as data:
         data.write_contigs(refs)
 
@@ -144,8 +146,8 @@ def main():
             for result in pool.imap_unordered(func, arguments):
                 #if not result:
                 #    continue
-                c, p, x, y, x2 = result
-                data.store(c, p, x, y, x2)
+                c, p, x, y, x2, x3 = result
+                data.store(c, p, x, y, x2, x3)
                 finished += 1
 
                 if finished % 10 == 0:

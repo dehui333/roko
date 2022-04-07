@@ -50,7 +50,7 @@ class Storage:
 
         print(f'Writing to {group.name}')
         group.create_dataset('examples', data=self.X, chunks=(1, 50, 90))
-        group.create_dataset('stats', data=self.X2, chunks=(1, 6, 90))
+        group.create_dataset('stats', data=self.X2, chunks=(1, 5, 90))
         group.create_dataset('cov', data=self.X3, chunks=(1, 1, 90))
 
     def clear(self):
