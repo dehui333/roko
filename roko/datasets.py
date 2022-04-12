@@ -83,7 +83,7 @@ class TrainDataset(StorageDataset):
         X2 = group['stats'][offset]
         X3 = group['cov'][offset]
 
-        return X, Y, X2
+        return X, Y, X2, X3
 
 
 class InMemoryTrainDataset(Dataset):

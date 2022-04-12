@@ -63,14 +63,14 @@ FeatureGenerator::FeatureGenerator(const char* filename, const char* ref,
     bam = readBAM(filename);
     auto pileup_inclusive = bam->pileup(region, true);
     uint32_t i = 0;
-    while (pileup_inclusive->has_next()) {
+    /*while (pileup_inclusive->has_next()) {
         auto column = pileup_inclusive->next();
         long rpos = column->position;
         if (rpos < pileup_inclusive->start()) continue; 
         if (rpos >= pileup_inclusive->end()) break;
         auto& stat = stats_info[std::make_pair(rpos, 0)]; 
         stat.normalized_cov = (column->count() - (float) median) / mad;
-    }
+    }*/
 
     pileup_iter = bam->pileup(region);
     if (dict == Py_None) { 
@@ -210,6 +210,7 @@ void FeatureGenerator::pos_queue_push(std::pair<pos_index_t, pos_index_t>& index
     uint16_t num_total = s.n_total;
     if (index.second != 0) {
         if ((float) s.largest_diff/ num_total < NON_GAP_THRESHOLD) {
+            align_info.erase(index);
             return;
         }
     } 
@@ -231,7 +232,10 @@ void FeatureGenerator::pos_queue_push(std::pair<pos_index_t, pos_index_t>& index
 
 // should have at least num elements in the container
 void FeatureGenerator::pos_queue_pop(uint16_t num) {
-    
+    for (auto it = pos_queue.begin(), end = pos_queue.begin() + num; it != end; ++it) {
+        align_info.erase(*it);
+    }
+
     pos_queue.erase(pos_queue.begin(), pos_queue.begin() + num);
     while (distances.size() > 0 && num >=(distances.front()+1)) {
         num -= distances.front() + 1;
@@ -430,8 +434,8 @@ void FeatureGenerator::align_to_target(pos_index_t base_index, std::vector<segme
 
         }
 
-        pos_queue_push(index); 
         align_info[index] = target_positions[i];
+        pos_queue_push(index); 
         if (has_labels) {
             labels_info[index] = target_positions_labels[i];
         }
@@ -551,7 +555,6 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
         if (rpos >= pileup_iter->end()) break;
         std::vector<segment> ins_segments; 
         std::vector<segment> no_ins_reads;
-        
         //std::cout << "rpos " << rpos << std::endl;
         //std::cout << "count " << column->count() << std::endl;
         // Put the unaligned labels sequence into s
@@ -575,20 +578,19 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
         if (s.size() > 0) {
             ins_segments.emplace_back(std::move(s), LABEL_SEQ_ID);
         }
-
         std::pair<pos_index_t, pos_index_t> base_index(rpos, 0);
 
         while(column->has_next()) {
             auto r = column->next();
             if (r->is_refskip()) continue;
+
+
+
             if (align_bounds.find(r->query_id()) == align_bounds.end()) {
                 align_bounds.emplace(r->query_id(), std::make_pair(r->ref_start(), r->ref_end()));
             }
             strand.emplace(r->query_id(), !r->rev());
             
-            //if (align_info.find(index) == align_info.end()) {
-            //    pos_queue_push(index);
-           // }
             if (r->is_del()) {
                 // DELETION
                 align_info[base_index].emplace(r->query_id(), PosInfo(Bases::GAP));
@@ -627,11 +629,9 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
 
             align_ins_longest(rpos, ins_segments, no_ins_reads);
 
-        } 
-
+        }
         while (pos_queue.size() >= dimensions[1]) {
             if (distances.empty())  {
-                
                 pos_queue_pop(pos_queue.size() - dimensions[1]/4 * 3);
                 continue;
                 
@@ -639,14 +639,13 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                 uint16_t a = distances.front() - dimensions[1]/4 * 3;
                 uint16_t b = pos_queue.size();
                 
-                pos_queue_pop(std::min(a, b));
+                pos_queue_pop(std::min(a,b));
                 continue;
             } 
 
                         
             std::set<uint32_t> valid_aligns;
             const auto it = pos_queue.begin();
-
             for (auto s = 0; s < dimensions[1]; s++) {    
                 auto curr = it + s;
                 
@@ -657,6 +656,8 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                 }
 
             }
+
+
             std::vector<uint32_t> valid(valid_aligns.begin(), valid_aligns.end());
            
             int valid_size = valid.size();
@@ -756,10 +757,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             data->X2.push_back(X2);
             data->Y.push_back(Y);
             data->X3.push_back(X3);
-            data->positions.emplace_back(pos_queue.begin(), pos_queue.begin() + dimensions[1]);
-            for (auto it = pos_queue.begin(), end = pos_queue.begin() + WINDOW; it != end; ++it) {
-                align_info.erase(*it);
-            }
+            data->positions.emplace_back(pos_queue.begin(), pos_queue.begin() + dimensions[1]);            
             pos_queue_pop(WINDOW);
         }
     }

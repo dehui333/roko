@@ -105,9 +105,9 @@ static PyObject* initialize_cpp(PyObject *self, PyObject *args) {
 
     }
 
-    for (auto& p:contig_cov_info) {
+    /*for (auto& p:contig_cov_info) {
         std::cout << p.first << " median " << p.second.median << " mad " << p.second.mad << std::endl;
-    }
+    }*/
       
     Py_INCREF(Py_None);
     return Py_None;

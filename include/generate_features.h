@@ -97,11 +97,11 @@ class FeatureGenerator {
         // store progress
         std::unordered_map<std::pair<pos_index_t, pos_index_t>, uint8_t, pair_hash> labels;
         std::deque<std::pair<pos_index_t, pos_index_t>> pos_queue;
-        std::unordered_map<std::pair<pos_index_t, pos_index_t>, std::unordered_map<uint32_t, PosInfo>, pair_hash> align_info;
-        std::unordered_map<std::pair<pos_index_t, pos_index_t>, uint8_t, pair_hash> labels_info;
+        std::unordered_map<std::pair<pos_index_t, pos_index_t>, std::unordered_map<uint32_t, PosInfo>, pair_hash> align_info; // !
+        std::unordered_map<std::pair<pos_index_t, pos_index_t>, uint8_t, pair_hash> labels_info; // !
         std::unordered_map<uint32_t, std::pair<pos_index_t, pos_index_t>> align_bounds;
         std::unordered_map<uint32_t, bool> strand;
-        std::unordered_map<std::pair<pos_index_t, pos_index_t>, PosStats, pair_hash> stats_info;
+        std::unordered_map<std::pair<pos_index_t, pos_index_t>, PosStats, pair_hash> stats_info; // !
         // how far away is each uncertain position away from the previous one
         // or the start of the queue
         std::queue<uint16_t> distances; 

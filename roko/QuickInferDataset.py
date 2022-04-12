@@ -44,12 +44,16 @@ def generate_args_for_feature_gen(list_of_string_tuples, inference):
             bam_Y = t[2]
         with open(draft_fasta, 'r') as handle:
             drafts = [(str(r.id), str(r.seq)) for r in SeqIO.parse(handle, 'fasta')]
+        contig_names = []
+        contig_lens = []
         for name, seq in drafts:
             contigs[name] = (seq, len(seq))
+            contig_names.append(name)
+            contig_lens.append(len(seq))
             for region in generate_regions(seq, name):
                 a = (bam_X, None, seq, region) if inference else (bam_X, bam_Y, seq, region)
                 results.append(a)
-
+    #gen.initialize(contig_names, contig_lens)
     return results, contigs
 
 def worker_init_fn(worker_id):
@@ -73,8 +77,10 @@ def f(args):
          
 class QuickInferDataset(torch.utils.data.IterableDataset):
     def __init__(self, bam_X, draft_path, num_processes):
-        self.list_of_args, self.contigs  = generate_args_for_feature_gen([(bam_X, draft_path, None)], True)
+        self.list_of_args, self.contigs = generate_args_for_feature_gen([(bam_X, draft_path, None)], True)
         self.num_processes = num_processes
+
+
     def __iter__(self):
         with Pool(processes=self.num_processes) as pool:
             for result, region_name in pool.imap_unordered(f, self.list_of_args):
