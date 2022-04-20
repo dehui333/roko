@@ -39,26 +39,24 @@ struct Data{
 
 struct PosInfo{
     Bases base;
-    PosInfo(Bases b) : base(b) {};
+    uint8_t mq;
+    PosInfo(Bases b, uint8_t mq) : base(b), mq(mq) {};
 };
 
 struct PosStats {
-    uint16_t n_total = 0;
-    uint16_t n_GAP = 0;
-    uint16_t n_A = 0;
-    uint16_t n_C = 0;
-    uint16_t n_G = 0;
-    uint16_t n_T = 0;
-    uint16_t n_bq = 0;
-    uint16_t n_mq = 0;
-    float avg_bq = 0;
-    float avg_mq = 0;
-    uint16_t largest_diff = 0;
-    float normalized_cov = 0;
-    
-    //PosStats() : avg_mq(0), n_mq(0), avg_pq(0), n_pq(0) {};
-    
-    
+    uint32_t n_total = 0;
+    uint32_t n_GAP = 0;
+    uint32_t n_A = 0;
+    uint32_t n_C = 0;
+    uint32_t n_G = 0;
+    uint32_t n_T = 0;
+  //  uint16_t n_bq = 0;
+  //  uint16_t n_mq = 0;
+//    float avg_bq = 0;
+ //   float avg_mq = 0;
+    uint32_t largest_diff = 0;
+    float normalized_cov = 0;    
+    //PosStats() : avg_mq(0), n_mq(0), avg_pq(0), n_pq(0) {};        
 };
 
 struct EnumClassHash
@@ -110,8 +108,8 @@ class FeatureGenerator {
             std::string sequence;
             uint64_t index;
             uint8_t mq;
-            std::vector<uint8_t> bqs; // the 1st is the bq of the base before ins segment, the last is after
-            segment(std::string seq, int id, uint8_t mq, std::vector<uint8_t> bqs) : sequence(seq), index(id), mq(mq), bqs(bqs) {};
+            //std::vector<uint8_t> bqs; // the 1st is the bq of the base before ins segment, the last is after
+            segment(std::string seq, int id, uint8_t mq) : sequence(seq), index(id), mq(mq) {};
             segment(std::string seq, int id) : sequence(seq), index(id) {};
         };
 
@@ -135,11 +133,11 @@ class FeatureGenerator {
 
         void convert_py_labels_dict(PyObject *dict);
 
-        void increment_base_count(std::pair<pos_index_t, pos_index_t>& index, Bases b);
+        void increment_base_count(std::pair<pos_index_t, pos_index_t>& index, PosInfo& pos_info);
 
-        void add_bq_sample(std::pair<pos_index_t, pos_index_t>& index, float bq);
+        //void add_bq_sample(std::pair<pos_index_t, pos_index_t>& index, float bq);
 
-        void add_mq_sample(std::pair<pos_index_t, pos_index_t>& index, uint8_t mq);
+        //void add_mq_sample(std::pair<pos_index_t, pos_index_t>& index, uint8_t mq);
 
         void pos_queue_push(std::pair<pos_index_t, pos_index_t>& index);
 

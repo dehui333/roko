@@ -13,6 +13,7 @@
 #include <string>
 #include <cmath>
 #include <iostream>
+#include <chrono>
 
 #include "edlib.h"
 #include "generate_features.h"
@@ -62,7 +63,7 @@ FeatureGenerator::FeatureGenerator(const char* filename, const char* ref,
     const char* region, PyObject* dict, uint16_t median, uint16_t mad): draft(ref) {
     bam = readBAM(filename);
     auto pileup_inclusive = bam->pileup(region, true);
-    uint32_t i = 0;
+    
     /*while (pileup_inclusive->has_next()) {
         auto column = pileup_inclusive->next();
         long rpos = column->position;
@@ -123,7 +124,7 @@ void FeatureGenerator::convert_py_labels_dict(PyObject *dict) {
     }
 }
 
-void FeatureGenerator::add_bq_sample(std::pair<pos_index_t, pos_index_t>& index, float bq) {
+/*void FeatureGenerator::add_bq_sample(std::pair<pos_index_t, pos_index_t>& index, float bq) {
     auto& info = stats_info[index];
     info.avg_bq = info.avg_bq + (bq - info.avg_bq)/ ++info.n_bq;
     
@@ -134,11 +135,17 @@ void FeatureGenerator::add_mq_sample(std::pair<pos_index_t, pos_index_t>& index,
     info.avg_mq = info.avg_mq + (float) (mq - info.avg_mq)/ ++info.n_mq;
 
 
-}
+}*/
 
-void FeatureGenerator::increment_base_count(std::pair<pos_index_t, pos_index_t>& index, Bases b) {
+void FeatureGenerator::increment_base_count(std::pair<pos_index_t, pos_index_t>& index, PosInfo& pos_info) {
+   
+    //std::cout << "increment " << index.first << ", " << index.second << " " << base_to_char(pos_info.base) << " " << int(pos_info.mq) << std::endl; 
+    
+    Bases b = pos_info.base;
+    uint8_t mq = pos_info.mq;
     auto& s = stats_info[index];
-    s.n_total++;
+    //std::cout << " gap " << s.n_GAP << std::endl;
+    s.n_total += mq;
     Bases draft_base = Bases::GAP;
     if (index.second == 0) {
         draft_base = char_to_base(draft[index.first]);
@@ -146,32 +153,32 @@ void FeatureGenerator::increment_base_count(std::pair<pos_index_t, pos_index_t>&
     bool diff = draft_base != b;
     switch(b) {
         case Bases::A:
-            s.n_A++;
+            s.n_A += mq;
             if (diff && s.n_A > s.largest_diff) {
                s.largest_diff = s.n_A;
             }
             break;
         case Bases::C:
-            s.n_C++;
+            s.n_C += mq;
             if (diff && s.n_C > s.largest_diff) {
                 s.largest_diff = s.n_C;
             }
 
             break;
         case Bases::G:
-            s.n_G++;
+            s.n_G += mq;
             if (diff && s.n_G > s.largest_diff) {
                 s.largest_diff = s.n_G;
             }
             break;
         case Bases::T:
-            s.n_T++;
+            s.n_T += mq;
             if (diff && s.n_T > s.largest_diff) {
                 s.largest_diff = s.n_T;
             }
             break;
         case Bases::GAP:
-            s.n_GAP++;
+            s.n_GAP += mq;
             if (diff && s.n_GAP > s.largest_diff) {
                 s.largest_diff = s.n_GAP;
             }
@@ -297,7 +304,7 @@ void FeatureGenerator::align_to_target(pos_index_t base_index, std::vector<segme
                         if (s.index == LABEL_SEQ_ID) {
                             target_positions_labels[ref_pos] = char_to_forward_int(char_at_pos);
                         } else {
-                            target_positions[ref_pos].emplace(s.index, PosInfo(base_at_pos));
+                            target_positions[ref_pos].emplace(s.index, PosInfo(base_at_pos, s.mq));
                             
                         }
                         break;
@@ -313,7 +320,7 @@ void FeatureGenerator::align_to_target(pos_index_t base_index, std::vector<segme
                         if (s.index == LABEL_SEQ_ID) {
                             ins_positions_labels[ref_pos+1][ins_index] = char_to_forward_int(char_at_pos);
                         } else {
-                            ins_positions[ref_pos+1][ins_index].emplace(s.index, PosInfo(base_at_pos));
+                            ins_positions[ref_pos+1][ins_index].emplace(s.index, PosInfo(base_at_pos, s.mq));
                         }
                         ins_index++;
                         break;
@@ -331,11 +338,11 @@ void FeatureGenerator::align_to_target(pos_index_t base_index, std::vector<segme
                         if (s.index == LABEL_SEQ_ID) {
                             target_positions_labels[ref_pos] = char_to_forward_int(char_at_pos);
                         } else {
-                            target_positions[ref_pos].emplace(s.index, PosInfo(base_at_pos));
+                            target_positions[ref_pos].emplace(s.index, PosInfo(base_at_pos, s.mq));
                         }
                         break;
                     default:
-                        std::cout << "Uknown alignment result!\n";
+                        std::cout << "Unknown alignment result!\n";
 
 
                 }
@@ -351,7 +358,7 @@ void FeatureGenerator::align_to_target(pos_index_t base_index, std::vector<segme
                 if (s.index == LABEL_SEQ_ID) {
                     target_positions_labels[i] = char_to_forward_int(char_at_pos);
                 } else {
-                    target_positions[i].emplace(s.index, PosInfo(base_at_pos));
+                    target_positions[i].emplace(s.index, PosInfo(base_at_pos, s.mq));
                 }
             }
 
@@ -360,7 +367,7 @@ void FeatureGenerator::align_to_target(pos_index_t base_index, std::vector<segme
 
     }
   
-    uint16_t pos_counts[non_label_seqs.size()] = {0};
+    //uint16_t pos_counts[non_label_seqs.size()] = {0};
 
     pos_index_t count = 1;
     // correspond to positions before the first position of star before aligning
@@ -374,26 +381,24 @@ void FeatureGenerator::align_to_target(pos_index_t base_index, std::vector<segme
         for (uint16_t k = 0; k < non_label_seqs.size(); k++) {
             auto& s = non_label_seqs[k];
             if (map.find(s->index) == map.end()) {
-                map.emplace(s->index, PosInfo(Bases::GAP));                
-                add_bq_sample(index, ( (float) s->bqs[pos_counts[k]] + s->bqs[pos_counts[k] + 1]) /2 );
-                add_mq_sample(index, s->mq);
+                map.emplace(s->index, PosInfo(Bases::GAP, s->mq));                
+                //add_bq_sample(index, ( (float) s->bqs[pos_counts[k]] + s->bqs[pos_counts[k] + 1]) /2 );
+                //add_mq_sample(index, s->mq);
 
-            } else {
+            } /*else {
                
                 add_bq_sample(index, s->bqs[++pos_counts[k]]);
                 add_mq_sample(index, s->mq);
-            }
+            }*/
         }
         for (auto& s: no_ins_reads) { 
-            map.emplace(s.index, PosInfo(Bases::GAP));
-            add_bq_sample(index, ((float) s.bqs[0] + s.bqs[1]) /2);
-            add_mq_sample(index, s.mq);
-
-             
+            map.emplace(s.index, PosInfo(Bases::GAP, s.mq));
+            //add_bq_sample(index, ((float) s.bqs[0] + s.bqs[1]) /2);
+            //add_mq_sample(index, s.mq);
         }
         for (auto& pair: map) {
-            auto b = pair.second.base;
-            increment_base_count(index, b);  
+            //auto b = pair.second.base;
+            increment_base_count(index, pair.second);  
 
         }
 
@@ -413,25 +418,24 @@ void FeatureGenerator::align_to_target(pos_index_t base_index, std::vector<segme
         for (uint16_t k = 0 ; k < non_label_seqs.size(); k++) {
             auto& s = non_label_seqs[k];
             if (target_positions[i].find(s->index) == target_positions[i].end()) {
-                target_positions[i].emplace(s->index, PosInfo(Bases::GAP));
-                add_bq_sample(index, ((float) s->bqs[pos_counts[k]] + s->bqs[pos_counts[k] + 1])/2);
-                add_mq_sample(index, s->mq);
+                target_positions[i].emplace(s->index, PosInfo(Bases::GAP, s->mq));
+                //add_bq_sample(index, ((float) s->bqs[pos_counts[k]] + s->bqs[pos_counts[k] + 1])/2);
+                //add_mq_sample(index, s->mq);
 
-            } else {
+            } /*else {
                 add_bq_sample(index, s->bqs[++pos_counts[k]]);
                 add_mq_sample(index, s->mq);
 
-            }
+            }*/
         }
         for (auto& s: no_ins_reads) {
-            target_positions[i].emplace(s.index, PosInfo(Bases::GAP));
-            add_bq_sample(index, ((float) s.bqs[0] + s.bqs[1]) /2);
-            add_mq_sample(index, s.mq);
+            target_positions[i].emplace(s.index, PosInfo(Bases::GAP, s.mq));
+            //add_bq_sample(index, ((float) s.bqs[0] + s.bqs[1]) /2);
+            //add_mq_sample(index, s.mq);
         }
         for (auto& pair: target_positions[i]) {
-            auto b = pair.second.base;
-            increment_base_count(index, b);  
-
+            //auto b = pair.second.base;
+            increment_base_count(index, pair.second);  
         }
 
         align_info[index] = target_positions[i];
@@ -449,26 +453,26 @@ void FeatureGenerator::align_to_target(pos_index_t base_index, std::vector<segme
             for (uint16_t k = 0; k< non_label_seqs.size(); k++) {
                 auto& s = non_label_seqs[k];
                 if (map.find(s->index) == map.end()) {
-                    map.emplace(s->index, PosInfo(Bases::GAP));
+                    map.emplace(s->index, PosInfo(Bases::GAP, s->mq));
                    
-                    add_bq_sample(index, ((float) s->bqs[pos_counts[k]] + s->bqs[pos_counts[k] + 1])/2  );
-                    add_mq_sample(index, s->mq);
+                    //add_bq_sample(index, ((float) s->bqs[pos_counts[k]] + s->bqs[pos_counts[k] + 1])/2  );
+                    //add_mq_sample(index, s->mq);
 
-                } else {
+                }/* else {
                    
                     add_bq_sample(index, s->bqs[++pos_counts[k]]);
                     add_mq_sample(index, s->mq);
-                }
+                }*/
             }
             for (auto& s: no_ins_reads) {
-                map.emplace(s.index, PosInfo(Bases::GAP));	
-                add_bq_sample(index, ((float) s.bqs[0] + s.bqs[1]) /2);
-                add_mq_sample(index, s.mq);
+                map.emplace(s.index, PosInfo(Bases::GAP, s.mq));	
+                //add_bq_sample(index, ((float) s.bqs[0] + s.bqs[1]) /2);
+                //add_mq_sample(index, s.mq);
 
             }
             for (auto& pair: map) {
-                auto b = pair.second.base;
-                increment_base_count(index, b);  
+                //auto b = pair.second.base;
+                increment_base_count(index, pair.second);  
 
             }
 
@@ -545,6 +549,8 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
         dims2[i] = dimensions2[i];
         dims3[i] = dimensions3[i];
     }
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    std::mt19937 g (seed);
  
     auto data = std::unique_ptr<Data>(new Data());
     
@@ -579,12 +585,9 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             ins_segments.emplace_back(std::move(s), LABEL_SEQ_ID);
         }
         std::pair<pos_index_t, pos_index_t> base_index(rpos, 0);
-
         while(column->has_next()) {
             auto r = column->next();
             if (r->is_refskip()) continue;
-
-
 
             if (align_bounds.find(r->query_id()) == align_bounds.end()) {
                 align_bounds.emplace(r->query_id(), std::make_pair(r->ref_start(), r->ref_end()));
@@ -593,32 +596,34 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             
             if (r->is_del()) {
                 // DELETION
-                align_info[base_index].emplace(r->query_id(), PosInfo(Bases::GAP));
-                increment_base_count(base_index, Bases::GAP);
-                add_mq_sample(base_index, r->mqual());
-                add_bq_sample(base_index, ((float) r->qqual(-1) + r->qqual(0)) /2);
+                auto pos_info = PosInfo(Bases::GAP, r->mqual());
+                align_info[base_index].emplace(r->query_id(), pos_info);
+                increment_base_count(base_index, pos_info);
+                //add_mq_sample(base_index, r->mqual());
+                //add_bq_sample(base_index, ((float) r->qqual(-1) + r->qqual(0)) /2);
             } else {
                 // POSITION
                 auto qbase = r->qbase(0);
-                align_info[base_index].emplace(r->query_id(), PosInfo(qbase));
-                increment_base_count(base_index, qbase);
-                add_mq_sample(base_index, r->mqual());
-                add_bq_sample(base_index,  r->qqual(0));
+                auto pos_info = PosInfo(qbase, r->mqual());
+                align_info[base_index].emplace(r->query_id(), pos_info);
+                increment_base_count(base_index, pos_info);
+                //add_mq_sample(base_index, r->mqual());
+                //add_bq_sample(base_index,  r->qqual(0));
                 // INSERTION
                 if (r-> indel() > 0) {
                     std::string s;
                     s.reserve(r->indel());
-                    std::vector<uint8_t> segment_bqs;
-                    segment_bqs.push_back(r->qqual(0));
+                    //std::vector<uint8_t> segment_bqs;
+                    //segment_bqs.push_back(r->qqual(0));
                     for (int i = 1, n = r->indel(); i <= n; ++i) {
                         qbase = r->qbase(i);
                         s.push_back(base_to_char(qbase));
-                        segment_bqs.push_back(r->qqual(i));
+                        //segment_bqs.push_back(r->qqual(i));
                     }
-                    segment_bqs.push_back(r->qqual(r->indel() + 1));
-                    ins_segments.emplace_back(std::move(s), r->query_id(), r->mqual(), std::move(segment_bqs));
+                    //segment_bqs.push_back(r->qqual(r->indel() + 1));
+                    ins_segments.emplace_back(std::move(s), r->query_id(), r->mqual());
                 } else {
-                    no_ins_reads.emplace_back("", r->query_id(), r->mqual(),std::initializer_list<uint8_t>{r->qqual(0), r->qqual(1)});
+                    no_ins_reads.emplace_back("", r->query_id(), r->mqual());
 
                 }
            }
@@ -642,33 +647,99 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                 pos_queue_pop(std::min(a,b));
                 continue;
             } 
+            struct id_mq {
+                uint32_t id;
+                uint8_t mq;
+                id_mq(uint32_t id, uint8_t mq) : id(id), mq(mq) {}
+            };
 
+            struct comp {
+                bool operator() (const id_mq& lhs, const id_mq& rhs) {
+                    return lhs.id < rhs.id;
+                }
+            };
+            
                         
-            std::set<uint32_t> valid_aligns;
+            std::set<id_mq, comp> valid_aligns;
             const auto it = pos_queue.begin();
             for (auto s = 0; s < dimensions[1]; s++) {    
                 auto curr = it + s;
                 
                 for (auto& align : align_info[*curr]) {
                     if (align.second.base != Bases::UNKNOWN) {
-                        valid_aligns.emplace(align.first);
+                        valid_aligns.emplace(align.first, align.second.mq);
                     }
                 }
-
             }
 
 
-            std::vector<uint32_t> valid(valid_aligns.begin(), valid_aligns.end());
-           
-            int valid_size = valid.size();
+            std::vector<id_mq> valid(valid_aligns.begin(), valid_aligns.end());
+            
 
+            uint32_t valid_size = valid.size();
+            std::uint32_t sum = 0;
+            for (auto x : valid) {
+                sum += x.mq;
+            }
+            double avg = (double) sum / valid_size;
+            struct alias {
+                std::uint32_t idx1;
+                std::uint32_t idx2;
+                double share1;
+                double share2;
+                alias(std::uint32_t idx1, std::uint32_t idx2, double share1, double share2) : idx1(idx1), idx2(idx2), share1(share1), share2(share2) {}
+            };
+            std::vector<alias> done;
+            done.reserve(valid_size);
+            std::vector<std::pair<std::uint32_t, double>> large;
+            large.reserve(valid_size);
+            std::vector<std::pair<std::uint32_t, double>> small;
+            small.reserve(valid_size);
+            for (std::uint32_t i = 0; i < valid_size; i++) {
+                double value = valid[i].mq;
+                if (value == avg) {
+                    done.emplace_back(i, i, avg, avg);
+                } else if (value < avg) {
+                    small.emplace_back(i, value);
+                } else {
+                    large.emplace_back(i, value);
+                }
+            }
+            while (!large.empty() && !small.empty()) {
+                auto large_one = large.back();
+                auto small_one = small.back();
+                large.pop_back();
+                small.pop_back();
+                double diff = avg -  small_one.second;
+                done.emplace_back(large_one.first, small_one.first, diff, small_one.second);
+                large_one.second -= diff;
+                if (large_one.second == avg) {
+                    done.emplace_back(large_one.first, large_one.first, large_one.second, large_one.second);
+                } else if (large_one.second < avg) {
+                    small.push_back(large_one);
+                } else {
+                    large.push_back(large_one);
+                }
+            }
+            if (!large.empty()) {
+                for (auto& x : large) {
+                    done.emplace_back(x.first, x.first, avg, avg);            
+                }
+            } else if (!small.empty()) {
+                for (auto& x: small) {
+                    done.emplace_back(x.first, x.first, avg, avg);
+                }
+            }
+
+            std::uniform_real_distribution<double> dist (0.0, (double) sum);
+            
             auto X = PyArray_SimpleNew(2, dims, NPY_UINT8);
-            auto X2 = PyArray_SimpleNew(2, dims2, NPY_UINT16);
+            auto X2 = PyArray_SimpleNew(2, dims2, NPY_UINT32);
             auto X3 = PyArray_SimpleNew(2, dims3, NPY_FLOAT);
             auto Y = PyArray_SimpleNew(1, labels_dim, NPY_UINT8);
             
             uint8_t* value_ptr;
-            uint16_t *value_ptr_16;
+            uint32_t *value_ptr_32;
             float* value_ptr_float;
 
             // First handle assembly (REF_ROWS)
@@ -687,39 +758,56 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             for (auto s = 0; s < dimensions[1]; s++) {
                 auto curr = it + s;
                 auto& pos_stats = stats_info[*curr];
-                value_ptr_16 = (uint16_t*) PyArray_GETPTR2(X2, 0, s);
-                *value_ptr_16 = pos_stats.n_GAP;
-                value_ptr_16 = (uint16_t*) PyArray_GETPTR2(X2, 1, s);
-                *value_ptr_16 = pos_stats.n_A;
-                value_ptr_16 = (uint16_t*) PyArray_GETPTR2(X2, 2, s);
-                *value_ptr_16 = pos_stats.n_C;
-                value_ptr_16 = (uint16_t*) PyArray_GETPTR2(X2, 3, s);
-                *value_ptr_16 = pos_stats.n_G;
-                value_ptr_16 = (uint16_t*) PyArray_GETPTR2(X2, 4, s);
-                *value_ptr_16 = pos_stats.n_T;
+                value_ptr_32 = (uint32_t*) PyArray_GETPTR2(X2, 0, s);
+                *value_ptr_32 = pos_stats.n_GAP;
+
+                value_ptr_32 = (uint32_t*) PyArray_GETPTR2(X2, 1, s);
+                *value_ptr_32 = pos_stats.n_A;
+                value_ptr_32 = (uint32_t*) PyArray_GETPTR2(X2, 2, s);
+                *value_ptr_32 = pos_stats.n_C;
+                value_ptr_32 = (uint32_t*) PyArray_GETPTR2(X2, 3, s);
+                *value_ptr_32 = pos_stats.n_G;
+                value_ptr_32 = (uint32_t*) PyArray_GETPTR2(X2, 4, s);
+                *value_ptr_32 = pos_stats.n_T;
 
                 value_ptr_float = (float*) PyArray_GETPTR2(X3, 0, s);
             
 
-                if (curr->second == 0) {
+                /*if (curr->second == 0) {
                     *value_ptr_float = pos_stats.normalized_cov;
     
                 } else {
                     auto& stats = stats_info[std::make_pair(curr->first, 0)];
                     *value_ptr_float = stats.normalized_cov;
 
-                }
+                }*/
 
             }
-
+            
             for (int r = REF_ROWS; r < dimensions[0]; r++) {
 
                 uint8_t base;
-                auto random_n = rand();
-                auto random_num = random_n  % valid_size;
+               // auto random_n = rand();
+               // auto random_num = random_n  % valid_size;
 
-                uint32_t query_id = valid[random_num];
+                double value = dist(g);
+                uint16_t idx = value/avg;
+                auto& chosen = done[idx];
+                uint32_t random_num; 
+                 
+                if (chosen.idx1 == chosen.idx2) {
+                    random_num = chosen.idx1;
+                } else {
+                    if (value > idx * avg + chosen.share1) {
+                        random_num = chosen.idx2;
+                    } else {
+                        random_num = chosen.idx1;
+                    }
+                }
 
+                uint32_t query_id = valid[random_num].id;
+
+                
                 auto& fwd = strand[query_id];
 
 
@@ -745,6 +833,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                 }
 
             }
+
             if (has_labels) {
                 for (auto s = 0; s < dimensions[1]; s++) {
                     auto curr = it + s;

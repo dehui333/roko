@@ -85,7 +85,7 @@ class QuickInferDataset(torch.utils.data.IterableDataset):
         with Pool(processes=self.num_processes) as pool:
             for result, region_name in pool.imap_unordered(f, self.list_of_args):
                 for P, X, Y, X2, X3 in zip(*result):
-                    yield region_name, torch.tensor(P), X, X2.astype(np.int16), X3
+                    yield region_name, torch.tensor(P), X, X2, X3
             
                 
 #obsolete
