@@ -585,15 +585,21 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             ins_segments.emplace_back(std::move(s), LABEL_SEQ_ID);
         }
         std::pair<pos_index_t, pos_index_t> base_index(rpos, 0);
+        uint32_t num_low_mq = 0;
         while(column->has_next()) {
             auto r = column->next();
             if (r->is_refskip()) continue;
+            if (r->mqual() < 10) {
+                if (num_low_mq >= 100) continue;
+                num_low_mq++;
+            }
 
             if (align_bounds.find(r->query_id()) == align_bounds.end()) {
                 align_bounds.emplace(r->query_id(), std::make_pair(r->ref_start(), r->ref_end()));
             }
             strand.emplace(r->query_id(), !r->rev());
-            
+    
+
             if (r->is_del()) {
                 // DELETION
                 auto pos_info = PosInfo(Bases::GAP, r->mqual());
