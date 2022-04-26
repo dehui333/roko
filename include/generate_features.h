@@ -49,10 +49,10 @@ struct PosStats {
     uint16_t n_C = 0;
     uint16_t n_G = 0;
     uint16_t n_T = 0;
-    uint16_t n_bq = 0;
-    uint16_t n_mq = 0;
-    float avg_bq = 0;
-    float avg_mq = 0;
+//    uint16_t n_bq = 0;
+//    uint16_t n_mq = 0;
+//    float avg_bq = 0;
+//    float avg_mq = 0;
     uint16_t largest_diff = 0;
     float normalized_cov = 0;
     
@@ -111,7 +111,7 @@ class FeatureGenerator {
             uint64_t index;
             uint8_t mq;
             std::vector<uint8_t> bqs; // the 1st is the bq of the base before ins segment, the last is after
-            segment(std::string seq, int id, uint8_t mq, std::vector<uint8_t> bqs) : sequence(seq), index(id), mq(mq), bqs(bqs) {};
+            segment(std::string seq, int id, uint8_t mq) : sequence(seq), index(id), mq(mq) {};
             segment(std::string seq, int id) : sequence(seq), index(id) {};
         };
 

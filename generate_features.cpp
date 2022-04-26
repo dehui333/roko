@@ -122,7 +122,7 @@ void FeatureGenerator::convert_py_labels_dict(PyObject *dict) {
 
     }
 }
-
+/*
 void FeatureGenerator::add_bq_sample(std::pair<pos_index_t, pos_index_t>& index, float bq) {
     auto& info = stats_info[index];
     info.avg_bq = info.avg_bq + (bq - info.avg_bq)/ ++info.n_bq;
@@ -134,7 +134,7 @@ void FeatureGenerator::add_mq_sample(std::pair<pos_index_t, pos_index_t>& index,
     info.avg_mq = info.avg_mq + (float) (mq - info.avg_mq)/ ++info.n_mq;
 
 
-}
+}*/
 
 void FeatureGenerator::increment_base_count(std::pair<pos_index_t, pos_index_t>& index, Bases b) {
     auto& s = stats_info[index];
@@ -375,19 +375,11 @@ void FeatureGenerator::align_to_target(pos_index_t base_index, std::vector<segme
             auto& s = non_label_seqs[k];
             if (map.find(s->index) == map.end()) {
                 map.emplace(s->index, PosInfo(Bases::GAP));                
-                add_bq_sample(index, ( (float) s->bqs[pos_counts[k]] + s->bqs[pos_counts[k] + 1]) /2 );
-                add_mq_sample(index, s->mq);
 
-            } else {
-               
-                add_bq_sample(index, s->bqs[++pos_counts[k]]);
-                add_mq_sample(index, s->mq);
-            }
+            } 
         }
         for (auto& s: no_ins_reads) { 
             map.emplace(s.index, PosInfo(Bases::GAP));
-            add_bq_sample(index, ((float) s.bqs[0] + s.bqs[1]) /2);
-            add_mq_sample(index, s.mq);
 
              
         }
@@ -414,19 +406,13 @@ void FeatureGenerator::align_to_target(pos_index_t base_index, std::vector<segme
             auto& s = non_label_seqs[k];
             if (target_positions[i].find(s->index) == target_positions[i].end()) {
                 target_positions[i].emplace(s->index, PosInfo(Bases::GAP));
-                add_bq_sample(index, ((float) s->bqs[pos_counts[k]] + s->bqs[pos_counts[k] + 1])/2);
-                add_mq_sample(index, s->mq);
 
             } else {
-                add_bq_sample(index, s->bqs[++pos_counts[k]]);
-                add_mq_sample(index, s->mq);
 
             }
         }
         for (auto& s: no_ins_reads) {
             target_positions[i].emplace(s.index, PosInfo(Bases::GAP));
-            add_bq_sample(index, ((float) s.bqs[0] + s.bqs[1]) /2);
-            add_mq_sample(index, s.mq);
         }
         for (auto& pair: target_positions[i]) {
             auto b = pair.second.base;
@@ -451,19 +437,11 @@ void FeatureGenerator::align_to_target(pos_index_t base_index, std::vector<segme
                 if (map.find(s->index) == map.end()) {
                     map.emplace(s->index, PosInfo(Bases::GAP));
                    
-                    add_bq_sample(index, ((float) s->bqs[pos_counts[k]] + s->bqs[pos_counts[k] + 1])/2  );
-                    add_mq_sample(index, s->mq);
 
-                } else {
-                   
-                    add_bq_sample(index, s->bqs[++pos_counts[k]]);
-                    add_mq_sample(index, s->mq);
-                }
+                } 
             }
             for (auto& s: no_ins_reads) {
                 map.emplace(s.index, PosInfo(Bases::GAP));	
-                add_bq_sample(index, ((float) s.bqs[0] + s.bqs[1]) /2);
-                add_mq_sample(index, s.mq);
 
             }
             for (auto& pair: map) {
@@ -595,30 +573,22 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                 // DELETION
                 align_info[base_index].emplace(r->query_id(), PosInfo(Bases::GAP));
                 increment_base_count(base_index, Bases::GAP);
-                add_mq_sample(base_index, r->mqual());
-                add_bq_sample(base_index, ((float) r->qqual(-1) + r->qqual(0)) /2);
             } else {
                 // POSITION
                 auto qbase = r->qbase(0);
                 align_info[base_index].emplace(r->query_id(), PosInfo(qbase));
                 increment_base_count(base_index, qbase);
-                add_mq_sample(base_index, r->mqual());
-                add_bq_sample(base_index,  r->qqual(0));
                 // INSERTION
                 if (r-> indel() > 0) {
                     std::string s;
                     s.reserve(r->indel());
-                    std::vector<uint8_t> segment_bqs;
-                    segment_bqs.push_back(r->qqual(0));
                     for (int i = 1, n = r->indel(); i <= n; ++i) {
                         qbase = r->qbase(i);
                         s.push_back(base_to_char(qbase));
-                        segment_bqs.push_back(r->qqual(i));
                     }
-                    segment_bqs.push_back(r->qqual(r->indel() + 1));
-                    ins_segments.emplace_back(std::move(s), r->query_id(), r->mqual(), std::move(segment_bqs));
+                    ins_segments.emplace_back(std::move(s), r->query_id(), r->mqual());
                 } else {
-                    no_ins_reads.emplace_back("", r->query_id(), r->mqual(),std::initializer_list<uint8_t>{r->qqual(0), r->qqual(1)});
+                    no_ins_reads.emplace_back("", r->query_id(), r->mqual());
 
                 }
            }
