@@ -93,6 +93,7 @@ class FeatureGenerator {
         const char* draft;
         bool has_labels;
         uint16_t counter = 0;
+        pos_index_t last_id1 = -1;
         
         // store progress
         std::unordered_map<std::pair<pos_index_t, pos_index_t>, uint8_t, pair_hash> labels;
@@ -142,7 +143,9 @@ class FeatureGenerator {
         void add_mq_sample(std::pair<pos_index_t, pos_index_t>& index, uint8_t mq);
 
         void pos_queue_push(std::pair<pos_index_t, pos_index_t>& index);
-
+  
+        void pos_queue_pad(pos_index_t id1);
+  
         void pos_queue_pop(uint16_t num);
 
     public:

@@ -62,8 +62,8 @@ FeatureGenerator::FeatureGenerator(const char* filename, const char* ref,
     const char* region, PyObject* dict, uint16_t median, uint16_t mad): draft(ref) {
     bam = readBAM(filename);
     auto pileup_inclusive = bam->pileup(region, true);
-    uint32_t i = 0;
-    /*while (pileup_inclusive->has_next()) {
+    /*uint32_t i = 0;
+    while (pileup_inclusive->has_next()) {
         auto column = pileup_inclusive->next();
         long rpos = column->position;
         if (rpos < pileup_inclusive->start()) continue; 
@@ -203,17 +203,58 @@ uint8_t FeatureGenerator::char_to_forward_int(char c) {
 }
 
 
+void FeatureGenerator::pos_queue_pad(pos_index_t id1) {
+    std::pair<pos_index_t, pos_index_t> index = std::make_pair(id1, 0);
+    auto& s = stats_info[index];
+    s.n_total = 1;
+    Bases draft_base = char_to_base(draft[id1]);
+    switch(draft_base) {
+        case Bases::A:
+            s.n_A++;
+            break;
+        case Bases::C:
+            s.n_C++;
+            break;
+        case Bases::G:
+            s.n_G++;
+            break;
+        case Bases::T:
+            s.n_T++;
+            break;
+        case Bases::GAP:
+            s.n_GAP++;
+            break;
+        case Bases::UNKNOWN:
+            std::cout << "Unknown base!" << std::endl;
+    }
+    last_id1 = id1;
+    pos_queue.push_back(index);
+    counter++;
+}
 
 void FeatureGenerator::pos_queue_push(std::pair<pos_index_t, pos_index_t>& index) {
+    //std::cout << "when " << index.first << ", " << index.second << " last is " << last_id1 << ", " << std::endl;
+    //std::cout << index.first << ", " << index.second << std::endl;
     bool is_uncertain = false;
     auto& s = stats_info[index];
     uint16_t num_total = s.n_total;
     if (index.second != 0) {
-        if ((float) s.largest_diff/ num_total < NON_GAP_THRESHOLD) {
+        if (num_total == 0 || (float) s.largest_diff/ num_total < NON_GAP_THRESHOLD) {
             align_info.erase(index);
             return;
+
         }
-    } 
+    }
+    if (index.first != 0) {
+        if (last_id1 < index.first - 1) {
+            //std::cout << "here " << std::endl;
+
+            //std::cout << "when " << index.first << ", " << index.second << " last is " << last_id1 << ", " << std::endl;
+            for (pos_index_t i = last_id1 + 1; i < index.first; i++) {
+                pos_queue_pad(i);
+            }
+        }
+    }
     
     if ((float) s.largest_diff/num_total >= UNCERTAIN_POSITION_THRESHOLD) {
         is_uncertain = true;
@@ -228,6 +269,7 @@ void FeatureGenerator::pos_queue_push(std::pair<pos_index_t, pos_index_t>& index
         pos_queue.push_back(index);
         counter++;
     }
+    last_id1 = index.first;
 }
 
 // should have at least num elements in the container
@@ -525,12 +567,12 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
     }
  
     auto data = std::unique_ptr<Data>(new Data());
-    
     while (pileup_iter->has_next()) {
         auto column = pileup_iter->next();
         long rpos = column->position;
         if (rpos < pileup_iter->start()) continue;
         if (rpos >= pileup_iter->end()) break;
+        //std::cout << "rpos " << rpos << std::endl;
         std::vector<segment> ins_segments; 
         std::vector<segment> no_ins_reads;
         //std::cout << "rpos " << rpos << std::endl;
@@ -557,7 +599,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             ins_segments.emplace_back(std::move(s), LABEL_SEQ_ID);
         }
         std::pair<pos_index_t, pos_index_t> base_index(rpos, 0);
-
+        std::uint32_t ins_count = 0;
         while(column->has_next()) {
             auto r = column->next();
             if (r->is_refskip()) continue;
@@ -587,6 +629,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                         s.push_back(base_to_char(qbase));
                     }
                     ins_segments.emplace_back(std::move(s), r->query_id(), r->mqual());
+                    ins_count++;
                 } else {
                     no_ins_reads.emplace_back("", r->query_id(), r->mqual());
 
@@ -595,8 +638,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
           
         }
         pos_queue_push(base_index); 
-        if (ins_segments.size() > 0) {
-
+        if (ins_count > 0) {
             align_ins_longest(rpos, ins_segments, no_ins_reads);
 
         }
@@ -631,6 +673,8 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
             std::vector<uint32_t> valid(valid_aligns.begin(), valid_aligns.end());
            
             int valid_size = valid.size();
+            int ref_rows_temp = REF_ROWS;
+            if (valid_size == 0) ref_rows_temp = dimensions[0]; // all rows use draft
 
             auto X = PyArray_SimpleNew(2, dims, NPY_UINT8);
             auto X2 = PyArray_SimpleNew(2, dims2, NPY_UINT16);
@@ -648,7 +692,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                 if (curr->second != 0) value = ENCODED_BASES[Bases::GAP];
                 else value = ENCODED_BASES[get_base(draft[curr->first])];
 
-                for (int r = 0; r < REF_ROWS; r++) {
+                for (int r = 0; r < ref_rows_temp; r++) {
                     value_ptr = (uint8_t*) PyArray_GETPTR2(X, r, s);
                     *value_ptr = value; // Forward strand - no +6
                 }
@@ -682,7 +726,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
 
             }
 
-            for (int r = REF_ROWS; r < dimensions[0]; r++) {
+            for (int r = ref_rows_temp; r < dimensions[0]; r++) {
 
                 uint8_t base;
                 auto random_n = rand();
