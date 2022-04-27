@@ -216,7 +216,7 @@ void FeatureGenerator::pos_queue_push(std::pair<pos_index_t, pos_index_t>& index
     auto& s = stats_info[index];
     uint16_t num_total = s.n_total;
     if (index.second != 0) {
-        if ((float) s.largest_diff/ num_total < NON_GAP_THRESHOLD) {
+        if (num_total == 0 || (float) s.largest_diff/ num_total < NON_GAP_THRESHOLD) {
             align_info.erase(index);
             return;
         }
@@ -586,6 +586,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
         }
         std::pair<pos_index_t, pos_index_t> base_index(rpos, 0);
         uint32_t num_low_mq = 0;
+        std::uint32_t ins_count = 0;
         while(column->has_next()) {
             auto r = column->next();
             if (r->is_refskip()) continue;
@@ -628,6 +629,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
                     }
                     //segment_bqs.push_back(r->qqual(r->indel() + 1));
                     ins_segments.emplace_back(std::move(s), r->query_id(), r->mqual());
+                    ins_count++;
                 } else {
                     no_ins_reads.emplace_back("", r->query_id(), r->mqual());
 
@@ -636,7 +638,7 @@ std::unique_ptr<Data> FeatureGenerator::generate_features() {
           
         }
         pos_queue_push(base_index); 
-        if (ins_segments.size() > 0) {
+        if (ins_count > 0) {
 
             align_ins_longest(rpos, ins_segments, no_ins_reads);
 
